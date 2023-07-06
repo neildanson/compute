@@ -1,22 +1,23 @@
-use std::{borrow::Cow, marker::PhantomData, str::FromStr, sync::mpsc::channel};
+use std::{borrow::Cow, sync::mpsc::channel};
 use wgpu::util::DeviceExt;
 
-// Indicates a u32 overflow in an intermediate Collatz value
-const OVERFLOW: u32 = 0xffffffff;
+use bytemuck::{ByteEq, ByteHash, Pod, Zeroable};
+
+#[derive(Copy, Clone, Pod, Zeroable, ByteEq, ByteHash, Debug)]
+#[repr(C)]
+pub struct Pair {
+    pub a: u32,
+    pub b: u32,
+}
 
 async fn run() {
     let numbers1 = vec![1, 2, 3, 4];
-    let numbers2 = vec![100, 100, 100, 100];
 
-
-    let steps = execute_gpu(&numbers1, &numbers2).await.unwrap();
+    let steps = execute_gpu(&numbers1).await.unwrap();
 
     let disp_steps: Vec<String> = steps
         .iter()
-        .map(|&n| match n {
-            OVERFLOW => "OVERFLOW".to_string(),
-            _ => n.to_string(),
-        })
+        .map(|&n| n.to_string())
         .collect();
 
     println!("Steps: [{}]", disp_steps.join(", "));
@@ -24,7 +25,7 @@ async fn run() {
     log::info!("Steps: [{}]", disp_steps.join(", "));
 }
 
-async fn execute_gpu(numbers1: &[u32], numbers2: &[u32]) -> Option<Vec<u32>> {
+async fn execute_gpu(numbers1: &[u32]) -> Option<Vec<u32>> {
     // Instantiates instance of WebGPU
     let instance = wgpu::Instance::default();
 
@@ -47,7 +48,7 @@ async fn execute_gpu(numbers1: &[u32], numbers2: &[u32]) -> Option<Vec<u32>> {
         .await
         .unwrap();
 
-    execute_gpu_inner(&device, &queue, numbers1, numbers2).await
+    execute_gpu_inner(&device, &queue, numbers1).await
 }
 
 struct Buffer {
@@ -244,18 +245,17 @@ impl<'a> Shader<'a> {
 async fn execute_gpu_inner(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-    numbers1: &[u32],
-    numbers2: &[u32]
+    numbers: &[u32],
 ) -> Option<Vec<u32>> {
     let mut shader = Shader::new(
         device,
         queue,
         include_str!("shader.wgsl"),
         "main",
-        numbers1.len(),
+        numbers.len(),
     );
-    shader.add_buffer(numbers1);
-    shader.add_buffer(numbers2);
+    let numbers : Vec<Pair> = numbers.iter().map(|n| Pair { a: *n, b: *n }).collect();
+    shader.add_buffer(&numbers);
     shader.execute()
 }
 
