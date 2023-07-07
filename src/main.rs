@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::mpsc::channel};
+use std::{borrow::Cow, sync::mpsc::channel, fmt::Debug};
 use wgpu::util::DeviceExt;
 
 use bytemuck::{ByteEq, ByteHash, Pod, Zeroable};
@@ -21,8 +21,6 @@ async fn run() {
         .collect();
 
     println!("Steps: [{}]", disp_steps.join(", "));
-    #[cfg(target_arch = "wasm32")]
-    log::info!("Steps: [{}]", disp_steps.join(", "));
 }
 
 async fn execute_gpu(numbers1: &[u32]) -> Option<Vec<u32>> {
@@ -55,10 +53,12 @@ struct Buffer {
     pub storage_buffer: wgpu::Buffer,
     pub staging_buffer: wgpu::Buffer,
     pub size: wgpu::BufferAddress,
+    pub binding: u32,
+    pub group: u32,
 }
 
 impl Buffer {
-    fn new_with_data<T>(device: &wgpu::Device, data: &[T]) -> Self
+    fn new_with_data<T>(device: &wgpu::Device, binding:u32, group:u32 ,data: &[T], name : Option<&str>) -> Self
     where
         T: bytemuck::Pod,
         T: std::fmt::Debug,
@@ -67,7 +67,7 @@ impl Buffer {
         let size = slice_size as wgpu::BufferAddress;
 
         let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: None,
+            label: name,
             size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -85,23 +85,25 @@ impl Buffer {
             storage_buffer,
             staging_buffer,
             size,
+            binding, 
+            group, 
         }
     }
 
-    fn new<T>(device: &wgpu::Device, size : usize) -> Self
+    fn new<T>(device: &wgpu::Device, binding:u32, group:u32, size : usize,  name : Option<&str>) -> Self
     where
         T: bytemuck::Pod,
         T: std::fmt::Debug,
     {
         let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: None,
+            label: name,
             size : size as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
         let storage_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Storage Buffer"), //Name of buffer
+            label: name, //Name of buffer
             size : size as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE
                 | wgpu::BufferUsages::COPY_DST
@@ -113,6 +115,15 @@ impl Buffer {
             storage_buffer,
             staging_buffer,
             size : size as wgpu::BufferAddress,
+            binding, 
+            group, 
+        }
+    }
+
+    pub fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
+        wgpu::BindGroupEntry {
+            binding: self.binding,
+            resource: self.storage_buffer.as_entire_binding()
         }
     }
 }
@@ -127,20 +138,22 @@ struct Shader<'a> {
 }
 
 impl<'a> Shader<'a> {
-    fn new(
+    fn new<T>(
         device: &'a wgpu::Device,
         queue: &'a wgpu::Queue,
         src: &str,
         entry_point: &str,
         result_size: usize,
-    ) -> Self {
+    ) -> Self 
+    where T : Pod,
+    T: Debug{
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(src)),
         });
 
         let result_size = result_size * std::mem::size_of::<u32>();
-        let result_buffer = Buffer::new::<u32>(device, result_size); //TODO: Make this a generic type
+        let result_buffer = Buffer::new::<T>(device, 0, 0, result_size, None);
 
         let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
@@ -161,12 +174,12 @@ impl<'a> Shader<'a> {
     }
 
     //Perhaps we should have a buffer struct including binding
-    fn add_buffer<T>(&mut self, input_buffer: &'a [T])
+    fn add_buffer<T>(&mut self, input_buffer: &'a [T], binding:u32, group:u32, name : Option<&str>)
     where
         T: bytemuck::Pod,
         T: std::fmt::Debug,
     {
-        let buffer = Buffer::new_with_data(self.device, input_buffer);
+        let buffer = Buffer::new_with_data(self.device, binding, group, input_buffer, name);
         self.buffers.push(buffer);
     }
 
@@ -174,19 +187,12 @@ impl<'a> Shader<'a> {
         let mut entries: Vec<_> = self
             .buffers
             .iter()
-            .enumerate()
-            .map(|(i, buffer)| wgpu::BindGroupEntry {
-                binding: (i + 1) as u32,
-                resource: buffer.storage_buffer.as_entire_binding(),
-            })
+            .map(|buffer| buffer.to_bind_group_entry())
             .collect();
 
-        let result_bge = wgpu::BindGroupEntry {
-            binding: 0,
-            resource: self.result_buffer.storage_buffer.as_entire_binding(),
-        };
+        let result_bge = self.result_buffer.to_bind_group_entry();
 
-        entries.insert(0, result_bge);
+        entries.push(result_bge);
 
         let bind_group_layout = self.compute_pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -247,7 +253,7 @@ async fn execute_gpu_inner(
     queue: &wgpu::Queue,
     numbers: &[u32],
 ) -> Option<Vec<u32>> {
-    let mut shader = Shader::new(
+    let mut shader = Shader::new::<u32>(
         device,
         queue,
         include_str!("shader.wgsl"),
@@ -255,7 +261,7 @@ async fn execute_gpu_inner(
         numbers.len(),
     );
     let numbers : Vec<Pair> = numbers.iter().map(|n| Pair { a: *n, b: *n }).collect();
-    shader.add_buffer(&numbers);
+    shader.add_buffer(&numbers, 1, 0, Some("numbers"));
     shader.execute()
 }
 

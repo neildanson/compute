@@ -1,11 +1,13 @@
-@group(0)
-@binding(0)
-var<storage, read_write> result: array<u32>; 
-
 struct Pair {
     a: u32,
     b: u32,
 }
+
+
+@group(0)
+@binding(0)
+var<storage, read_write> result: array<u32>; 
+
 
 @group(0)
 @binding(1)
