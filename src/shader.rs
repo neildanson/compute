@@ -72,8 +72,7 @@ impl<'a> Shader<'a> {
 
         entries.push(result_bge);
 
-        //let x= entries.group_by(|entry|entry.group);
-
+        //Group by binding.group
         let bind_group_layout = self.compute_pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
