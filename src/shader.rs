@@ -14,22 +14,20 @@ pub struct Shader<'a> {
 
 
 impl<'a> Shader<'a> {
-    pub fn new<T, R>(
+    pub fn new<R : Pod + Debug>(
         device: &'a wgpu::Device,
         queue: &'a wgpu::Queue,
         src: &str,
         entry_point: &str,
         result_size: usize,
-    ) -> Self 
-    where T : Pod,
-    T: Debug{
+    ) -> Self {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(src)),
         });
 
         let result_size = result_size * std::mem::size_of::<R>();
-        let result_buffer = Buffer::new_empty::<T>(device, 0, 0, result_size, Some("result"));
+        let result_buffer = Buffer::new_empty::<R>(device, 0, 0, result_size, Some("result"));
 
         let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
@@ -48,16 +46,6 @@ impl<'a> Shader<'a> {
             buffers,
         }
     }
-
-    //Perhaps we should have a buffer struct including binding
-    /*pub fn add_buffer<T>(&mut self, input_buffer: &'a [T], binding:u32, group:u32, name : Option<&str>)
-    where
-        T: bytemuck::Pod,
-        T: std::fmt::Debug,
-    {
-        let buffer = Buffer::new_with_data_slice(self.device, binding, group, input_buffer, name);
-        self.buffers.push(Box::new(buffer));
-    }*/
 
     pub fn add_buffer(&mut self, buffer: Buffer)
     {
@@ -79,9 +67,7 @@ impl<'a> Shader<'a> {
         //Group by binding.group
 
         let bind_group_layout = self.compute_pipeline.get_bind_group_layout(0);
-        println!("bind_group_layout: {:?}", bind_group_layout);
-        println!("");
-        println!("entries: {:#?}", entries.len());
+
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: None,
             layout: &bind_group_layout,
