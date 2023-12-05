@@ -3,6 +3,14 @@ struct Pair {
     b: u32,
 }
 
+struct Entity {
+    world: mat4x4<f32>,
+    color: vec4<f32>,
+};
+
+@group(1)
+@binding(0)
+var<uniform> u_entity: Entity;
 
 @group(0)
 @binding(0)
@@ -15,9 +23,6 @@ var<storage, read_write> v_indices1: array<Pair>;
 
 
 
-@group(0)
-@binding(2)
-var<storage, read_write> v_indices2: array<u32>;// this is used as both input and output for convenience
 
 @compute
 @workgroup_size(1)
