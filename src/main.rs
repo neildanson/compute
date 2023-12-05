@@ -11,19 +11,20 @@ pub struct Pair {
 }
 
 async fn run() {
-    let numbers1 = vec![1, 2, 3, 4];
-
-    let steps = execute_gpu(&numbers1).await.unwrap();
+    let numbers1 = vec![1, 2, 3, 4].into_iter().map(|n| Pair { a: n, b: n }).collect::<Vec<_>>()
+    ;
+    let shader_src = include_str!("shader.wgsl");
+    let steps = execute_gpu(shader_src, &numbers1).await.unwrap();
 
     let disp_steps: Vec<String> = steps
-        .iter()
-        .map(|&n| n.to_string())
+        .into_iter()
+        .map(|n:u32| n.to_string())
         .collect();
 
     println!("Steps: [{}]", disp_steps.join(", "));
 }
 
-async fn execute_gpu(numbers1: &[u32]) -> Option<Vec<u32>> {
+async fn execute_gpu<T: Pod + Debug, R: Pod + Debug>(shader_src: &str, input: &[T]) -> Option<Vec<R>> {
     // Instantiates instance of WebGPU
     let instance = wgpu::Instance::default();
 
@@ -46,7 +47,12 @@ async fn execute_gpu(numbers1: &[u32]) -> Option<Vec<u32>> {
         .await
         .unwrap();
 
-    execute_gpu_inner(&device, &queue, numbers1).await
+    execute_gpu_inner(&device, &queue, shader_src, input).await
+}
+
+trait Binding {
+    fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry;
+    fn copy_to_buffer(&self, encoder : &mut wgpu::CommandEncoder);
 }
 
 struct Buffer {
@@ -54,7 +60,7 @@ struct Buffer {
     pub staging_buffer: wgpu::Buffer,
     pub size: wgpu::BufferAddress,
     pub binding: u32,
-    pub group: u32,
+    pub group: u32, //TODO
 }
 
 impl Buffer {
@@ -119,12 +125,18 @@ impl Buffer {
             group, 
         }
     }
+}
 
-    pub fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
+impl Binding for Buffer {
+    fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
         wgpu::BindGroupEntry {
             binding: self.binding,
             resource: self.storage_buffer.as_entire_binding()
         }
+    }
+    
+    fn copy_to_buffer(&self, encoder : &mut wgpu::CommandEncoder) {
+        encoder.copy_buffer_to_buffer(&self.storage_buffer, 0, &self.staging_buffer, 0, self.size);
     }
 }
 
@@ -134,11 +146,11 @@ struct Shader<'a> {
     result_buffer: Buffer,
 
     compute_pipeline: wgpu::ComputePipeline,
-    buffers: Vec<Buffer>,
+    buffers: Vec<Box<dyn Binding>>,
 }
 
 impl<'a> Shader<'a> {
-    fn new<T>(
+    fn new<T, R>(
         device: &'a wgpu::Device,
         queue: &'a wgpu::Queue,
         src: &str,
@@ -152,7 +164,7 @@ impl<'a> Shader<'a> {
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(src)),
         });
 
-        let result_size = result_size * std::mem::size_of::<u32>();
+        let result_size = result_size * std::mem::size_of::<R>();
         let result_buffer = Buffer::new::<T>(device, 0, 0, result_size, None);
 
         let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -180,10 +192,11 @@ impl<'a> Shader<'a> {
         T: std::fmt::Debug,
     {
         let buffer = Buffer::new_with_data(self.device, binding, group, input_buffer, name);
-        self.buffers.push(buffer);
+        self.buffers.push(Box::new(buffer));
     }
 
-    fn execute(&mut self) -> Option<Vec<u32>> {
+    fn execute<R>(&mut self) -> Option<Vec<R>>
+    where R: Pod + Debug + Copy, {
         let mut entries: Vec<_> = self
             .buffers
             .iter()
@@ -193,6 +206,8 @@ impl<'a> Shader<'a> {
         let result_bge = self.result_buffer.to_bind_group_entry();
 
         entries.push(result_bge);
+
+        //let x= entries.group_by(|entry|entry.group);
 
         let bind_group_layout = self.compute_pipeline.get_bind_group_layout(0);
         let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -206,7 +221,7 @@ impl<'a> Shader<'a> {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut cpass =
-                encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None });
+                encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
             cpass.set_pipeline(&self.compute_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
 
@@ -214,9 +229,9 @@ impl<'a> Shader<'a> {
             cpass.dispatch_workgroups(self.result_buffer.size as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
         }
 
-        self.buffers.iter().for_each(|buffer| encoder.copy_buffer_to_buffer(&buffer.storage_buffer, 0, &buffer.staging_buffer, 0, self.result_buffer.size));
-        encoder.copy_buffer_to_buffer(&self.result_buffer.storage_buffer, 0, &self.result_buffer.staging_buffer, 0, self.result_buffer.size);
-
+        self.buffers.iter().for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
+        self.result_buffer.copy_to_buffer(&mut encoder);
+        
         // Submits command encoder for processing
         self.queue.submit(Some(encoder.finish()));
 
@@ -248,20 +263,20 @@ impl<'a> Shader<'a> {
     }
 }
 
-async fn execute_gpu_inner(
+async fn execute_gpu_inner<T : Pod + Debug, R : Pod +  Debug>(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-    numbers: &[u32],
-) -> Option<Vec<u32>> {
-    let mut shader = Shader::new::<u32>(
+    shader_src: &str,
+    input: &[T],
+) -> Option<Vec<R>> {
+    let mut shader = Shader::new::<T, R>(
         device,
         queue,
-        include_str!("shader.wgsl"),
+        shader_src,
         "main",
-        numbers.len(),
+        input.len(),
     );
-    let numbers : Vec<Pair> = numbers.iter().map(|n| Pair { a: *n, b: *n }).collect();
-    shader.add_buffer(&numbers, 1, 0, Some("numbers"));
+    shader.add_buffer(&input, 1, 0, Some("input"));
     shader.execute()
 }
 

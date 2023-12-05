@@ -22,5 +22,5 @@ var<storage, read_write> v_indices2: array<u32>;// this is used as both input an
 @compute
 @workgroup_size(1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    result[global_id.x] = v_indices1[global_id.x].a + v_indices1[global_id.x].b;
+    result[global_id.x] = v_indices1[global_id.x].a * v_indices1[global_id.x].b;
 }
