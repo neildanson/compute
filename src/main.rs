@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use compute::shader::Shader;
+use compute::{shader::Shader, buffer::Buffer};
 
 use bytemuck::{ByteEq, ByteHash, Pod, Zeroable};
 
@@ -11,9 +11,8 @@ pub struct Pair {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable)]
-struct Entity {
-    model: [[f32; 4]; 4],
+#[derive(Clone, Copy, Pod, Zeroable, Debug)]
+struct Color {
     color: [f32; 4],
 }
 
@@ -70,7 +69,11 @@ async fn execute_gpu_inner<T : Pod + Debug, R : Pod +  Debug>(
         "main",
         input.len(),
     );
-    shader.add_buffer(&input, 1, 0, Some("input"));
+    let color = Color { color: [0.0, 0.0, 0.0, 1.0] };
+    let input_buffer = Buffer::new_with_data_slice(device, 0, 1, input, Some("input"));
+    let color_buffer = Buffer::new_with_uniform_data(device, 0, 2, color, Some("color"));
+    shader.add_buffer(input_buffer);
+    shader.add_buffer(color_buffer);
     shader.execute()
 }
 

@@ -10,7 +10,7 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new_with_data<T>(device: &wgpu::Device, binding:u32, group:u32 ,data: &[T], name : Option<&str>) -> Self
+    pub fn new_with_data_slice<T>(device: &wgpu::Device, group:u32, binding:u32,data: &[T], name : Option<&str>) -> Self
     where
         T: bytemuck::Pod,
         T: std::fmt::Debug,
@@ -42,10 +42,42 @@ impl Buffer {
         }
     }
 
-    pub fn new<T>(device: &wgpu::Device, binding:u32, group:u32, size : usize,  name : Option<&str>) -> Self
+    pub fn new_with_uniform_data<T>(device: &wgpu::Device,  group:u32, binding:u32,data: T, name : Option<&str>) -> Self
     where
         T: bytemuck::Pod,
         T: std::fmt::Debug,
+    {
+        let slice_size = std::mem::size_of::<T>();
+        let size = slice_size as wgpu::BufferAddress;
+
+        let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: name,
+            size,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Storage Buffer"),
+            contents: bytemuck::bytes_of(&data),
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_SRC
+                | wgpu::BufferUsages::UNIFORM,
+        });
+
+        Buffer {
+            storage_buffer,
+            staging_buffer,
+            size,
+            binding, 
+            group, 
+        }
+    }
+    
+    pub fn new_empty<R>(device: &wgpu::Device, group:u32, binding:u32, size : usize,  name : Option<&str>) -> Self
+    where
+        R: bytemuck::Pod,
+        R: std::fmt::Debug,
     {
         let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
