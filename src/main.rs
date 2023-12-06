@@ -17,10 +17,10 @@ struct Color {
 }
 
 async fn run() {
-    let input = vec![1, 2, 3, 4].into_iter().map(|n| Pair { a: n, b: n }).collect::<Vec<_>>();
+    let input = (0 .. 1_000).into_iter().map(|n| Pair { a: n, b: n }).collect::<Vec<_>>();
     let shader_src = include_str!("shader.wgsl");
     let gpu = Gpu::new().await.unwrap();
-    let mut shader = gpu.create_shader::<u32>(shader_src, "main", 4);
+    let mut shader = gpu.create_shader::<u32>(shader_src, "main", 1001);
 
     let color = Color { color: [10.0, 0.0, 0.0, 1.0] };
     let input_buffer = gpu.create_buffer_from_slice( &input,0, 1,Some("input"));
