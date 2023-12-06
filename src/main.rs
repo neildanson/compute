@@ -1,5 +1,5 @@
+use compute::gpu::Gpu;
 use std::fmt::Debug;
-use compute::{shader::Shader, buffer::Buffer, gpu::Gpu};
 
 use bytemuck::{ByteEq, ByteHash, Pod, Zeroable};
 
@@ -17,23 +17,26 @@ struct Color {
 }
 
 async fn run() {
-    let input = (0 .. 1_000).into_iter().map(|n| Pair { a: n, b: n }).collect::<Vec<_>>();
+    let input = (0..1_000)
+        .into_iter()
+        .map(|n| Pair { a: n, b: n })
+        .collect::<Vec<_>>();
     let shader_src = include_str!("shader.wgsl");
     let gpu = Gpu::new().await.unwrap();
-    let mut shader = gpu.create_shader::<u32>(shader_src, "main", 1001);
 
-    let color = Color { color: [10.0, 0.0, 0.0, 1.0] };
-    let input_buffer = gpu.create_buffer_from_slice( &input,0, 1,Some("input"));
-    let color_buffer = gpu.create_buffer(color, 0, 2, Some("color"));
+    let color = Color {
+        color: [10.0, 0.0, 0.0, 1.0],
+    };
+    let input_buffer = gpu.create_buffer_from_slice(0, 1, &input, Some("input"));
+    let color_buffer = gpu.create_buffer(0, 2, color, Some("color"));
+    let result_buffer = gpu.create_readable_buffer::<u32>(0, 0, 1001, Some("result"));
+
+    let mut shader = gpu.create_shader::<u32>(shader_src, "main", result_buffer);
     shader.add_buffer(input_buffer);
     shader.add_buffer(color_buffer);
     let result = shader.execute().unwrap();
 
-
-    let disp_steps: Vec<String> = result
-        .into_iter()
-        .map(|n:u32| n.to_string())
-        .collect();
+    let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
 
     println!("Steps: [{}]", disp_steps.join(", "));
 }

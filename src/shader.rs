@@ -1,6 +1,6 @@
-use std::{borrow::Cow, sync::mpsc::channel, fmt::Debug};
 use crate::binding::Binding;
 use crate::buffer::Buffer;
+use std::{borrow::Cow, fmt::Debug, sync::mpsc::channel};
 
 use bytemuck::Pod;
 
@@ -12,22 +12,18 @@ pub struct Shader<'a> {
     buffers: Vec<Box<dyn Binding>>,
 }
 
-
 impl<'a> Shader<'a> {
-    pub fn new<R : Pod + Debug>(
+    pub fn new<R: Pod>(
         device: &'a wgpu::Device,
         queue: &'a wgpu::Queue,
         src: &str,
         entry_point: &str,
-        result_size: usize,
+        result_buffer: Buffer,
     ) -> Self {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(src)),
         });
-
-        let result_size = result_size * std::mem::size_of::<R>();
-        let result_buffer = Buffer::new_empty::<R>(device, 0, 0, result_size, Some("result"));
 
         let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
@@ -47,13 +43,14 @@ impl<'a> Shader<'a> {
         }
     }
 
-    pub fn add_buffer(&mut self, buffer: Buffer)
-    {
+    pub fn add_buffer(&mut self, buffer: Buffer) {
         self.buffers.push(Box::new(buffer));
     }
 
     pub fn execute<R>(&mut self) -> Option<Vec<R>>
-    where R: Pod + Debug + Copy, {
+    where
+        R: Pod + Debug + Copy,
+    {
         let mut entries: Vec<_> = self
             .buffers
             .iter()
@@ -78,8 +75,10 @@ impl<'a> Shader<'a> {
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
-            let mut cpass =
-                encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: None, timestamp_writes: None });
+            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
             cpass.set_pipeline(&self.compute_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
 
@@ -87,9 +86,11 @@ impl<'a> Shader<'a> {
             cpass.dispatch_workgroups(self.result_buffer.size as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
         }
 
-        self.buffers.iter().for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
+        self.buffers
+            .iter()
+            .for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
         self.result_buffer.copy_to_buffer(&mut encoder);
-        
+
         // Submits command encoder for processing
         self.queue.submit(Some(encoder.finish()));
 
