@@ -1,4 +1,4 @@
-use crate::{buffer::Buffer, shader::Shader};
+use crate::{buffer::{Buffer, BindingParameters}, shader::Shader};
 use bytemuck::Pod;
 
 pub struct Gpu {
@@ -50,31 +50,28 @@ impl Gpu {
 
     pub fn create_buffer<R: Pod>(
         &self,
-        group: u32,
-        binding: u32,
         data: R,
+        parameters : BindingParameters,
         name: Option<&str>,
     ) -> Buffer {
-        Buffer::new_with_uniform_data::<R>(&self.device, group, binding, data, name)
-    }
-
-    pub fn create_readable_buffer<R: Pod>(
-        &self,
-        group: u32,
-        binding: u32,
-        size: usize,
-        name: Option<&str>,
-    ) -> Buffer {
-        Buffer::new_empty::<R>(&self.device, group, binding, size, name)
+        Buffer::new::<R>(&self.device, parameters, data, name)
     }
 
     pub fn create_buffer_from_slice<R: Pod>(
         &self,
-        group: u32,
-        binding: u32,
         data: &[R],
+        parameters : BindingParameters,
         name: Option<&str>,
     ) -> Buffer {
-        Buffer::new_with_data_slice::<R>(&self.device, group, binding, data, name)
+        Buffer::new_from_slice::<R>(&self.device, parameters, data, name)
+    }
+
+    pub fn create_readable_buffer<R: Pod>(
+        &self,
+        size: usize,
+        parameters : BindingParameters,
+        name: Option<&str>,
+    ) -> Buffer {
+        Buffer::new_empty::<R>(&self.device, parameters, size, name)
     }
 }
