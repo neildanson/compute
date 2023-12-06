@@ -1,4 +1,7 @@
-use crate::{buffer::{Buffer, BindingParameters}, shader::Shader};
+use crate::{
+    buffer::{BindingParameters, Buffer},
+    shader::Shader,
+};
 use bytemuck::Pod;
 
 pub struct Gpu {
@@ -51,7 +54,7 @@ impl Gpu {
     pub fn create_buffer<R: Pod>(
         &self,
         data: R,
-        parameters : BindingParameters,
+        parameters: BindingParameters,
         name: Option<&str>,
     ) -> Buffer {
         Buffer::new::<R>(&self.device, parameters, data, name)
@@ -60,7 +63,7 @@ impl Gpu {
     pub fn create_buffer_from_slice<R: Pod>(
         &self,
         data: &[R],
-        parameters : BindingParameters,
+        parameters: BindingParameters,
         name: Option<&str>,
     ) -> Buffer {
         Buffer::new_from_slice::<R>(&self.device, parameters, data, name)
@@ -69,7 +72,7 @@ impl Gpu {
     pub fn create_readable_buffer<R: Pod>(
         &self,
         size: usize,
-        parameters : BindingParameters,
+        parameters: BindingParameters,
         name: Option<&str>,
     ) -> Buffer {
         Buffer::new_empty::<R>(&self.device, parameters, size, name)
