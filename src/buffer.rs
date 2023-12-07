@@ -1,6 +1,5 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::mpsc::channel};
 
-use crate::binding::Binding;
 use bytemuck::Pod;
 use wgpu::util::DeviceExt;
 
@@ -140,17 +139,32 @@ impl Buffer {
         }
     }
 
-    pub fn read<R : Pod>(&self) -> Vec<R> {
-        /*let data = self.staging_buffer.slice(..).get_mapped_range();
-        let result = data
-            .chunks_exact(std::mem::size_of::<R>())
-            .map(|b| bytemuck::from_bytes(b))
-            .collect::<Vec<_>>();
-        self.staging_buffer.unmap();
-        result*/
+    pub fn read<R : Pod>(&self, device : &wgpu::Device) -> Option<Vec<R>> {
+        let buffer_slice = self.staging_buffer.slice(..);
+        // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
+        let (sender, receiver) = channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
 
-        let result = Vec::new();
-        result
+        // Poll the device in a blocking manner so that our future resolves.
+        // In an actual application, `device.poll(...)` should
+        // be called in an event loop or on another thread.
+        device.poll(wgpu::Maintain::Wait);
+
+        // Awaits until `buffer_future` can be read from
+        if let Ok(Ok(())) = receiver.recv() {
+            // Gets contents of buffer
+            let data = buffer_slice.get_mapped_range();
+            // Since contents are got in bytes, this converts these bytes back to u32
+            let result = bytemuck::cast_slice(&data).to_vec();
+            // With the current interface, we have to make sure all mapped views are
+            // dropped before we unmap the buffer.
+            drop(data);
+            self.staging_buffer.unmap(); // Unmaps buffer from memory
+
+            Some(result)
+        } else {
+            None
+        }
     }
 
     pub fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {

@@ -5,7 +5,7 @@ use crate::{
 use bytemuck::Pod;
 
 pub struct Gpu {
-    device: wgpu::Device,
+    pub device: wgpu::Device,
     queue: wgpu::Queue,
 }
 

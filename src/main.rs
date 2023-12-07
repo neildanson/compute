@@ -20,7 +20,7 @@ struct Color {
 }
 
 async fn run() {
-    let input = (0..1_000)
+    let input = (0..10)
         .into_iter()
         .map(|n| Pair { a: n, b: n })
         .collect::<Vec<_>>();
@@ -70,10 +70,10 @@ async fn run() {
         shader.execute(&buffers, input.len() as u32, 1, 1);
     }
 
-    let result = result_buffer.read::<u32>();
-    //let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
+    let result = result_buffer.read::<u32>(&gpu.device).unwrap();
+    let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
 
-    //println!("Steps: [{}]", disp_steps.join(", "));
+    println!("Steps: [{}]", disp_steps.join(", "));
 }
 
 fn main() {
