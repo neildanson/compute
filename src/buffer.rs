@@ -91,9 +91,11 @@ impl Buffer {
             mapped_at_creation: false,
         });
 
+        let bytes = data.bytes();   
+
         let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Storage Buffer"),
-            contents: data.bytes().as_ref(),
+            contents: bytes.as_ref(),
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
         });
 

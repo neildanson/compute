@@ -7,7 +7,6 @@ pub struct Shader<'a> {
     device: &'a wgpu::Device,
     queue: &'a wgpu::Queue,
     compute_pipeline: wgpu::ComputePipeline,
-    buffers: Vec<Buffer>,
 }
 
 impl<'a> Shader<'a> {
@@ -29,18 +28,15 @@ impl<'a> Shader<'a> {
             entry_point,
         });
 
-        let buffers = Vec::new();
-
         Shader {
             device,
             queue,
             compute_pipeline,
-            buffers,
         }
     }
 
 
-    pub fn execute(&mut self, buffers : &[&Buffer], x : u32, y : u32, z : u32) -> Option<()>
+    pub fn execute(&mut self, buffers : &[&Buffer], x : u32, y : u32, z : u32) 
     {
         let entries: Vec<_> = buffers
             .iter()
@@ -75,39 +71,11 @@ impl<'a> Shader<'a> {
             cpass.dispatch_workgroups(x, y, z); 
         }
 
-        self.buffers
+        buffers
             .iter()
             .for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
 
         // Submits command encoder for processing
         self.queue.submit(Some(encoder.finish()));
-
-        None
-        /*
-        let buffer_slice = self.result_buffer.staging_buffer.slice(..);
-        // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
-        let (sender, receiver) = channel();
-        buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
-
-        // Poll the device in a blocking manner so that our future resolves.
-        // In an actual application, `device.poll(...)` should
-        // be called in an event loop or on another thread.
-        self.device.poll(wgpu::Maintain::Wait);
-
-        // Awaits until `buffer_future` can be read from
-        if let Ok(Ok(())) = receiver.recv() {
-            // Gets contents of buffer
-            let data = buffer_slice.get_mapped_range();
-            // Since contents are got in bytes, this converts these bytes back to u32
-            let result = bytemuck::cast_slice(&data).to_vec();
-            // With the current interface, we have to make sure all mapped views are
-            // dropped before we unmap the buffer.
-            drop(data);
-            self.result_buffer.staging_buffer.unmap(); // Unmaps buffer from memory
-
-            Some(result)
-        } else {
-            None
-        }*/
     }
 }

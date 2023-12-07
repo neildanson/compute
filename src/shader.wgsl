@@ -15,9 +15,11 @@ var<storage, read_write> result: array<u32>;
 @binding(1)
 var<storage, read_write> input: array<Pair>; 
 
+
 @group(0)
 @binding(2)
 var<uniform> u_entity: Color;
+
 
 
 @compute
