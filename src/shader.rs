@@ -72,13 +72,9 @@ impl<'a> Shader<'a> {
             cpass.set_pipeline(&self.compute_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
 
-            
-            //TODO - workout group size
             cpass.dispatch_workgroups(x, y, z); 
         }
 
-        
-        
         self.buffers
             .iter()
             .for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
