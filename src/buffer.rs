@@ -160,7 +160,7 @@ impl Buffer {
         }
     }
 
-    fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
+    pub fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
         encoder.copy_buffer_to_buffer(&self.storage_buffer, 0, &self.staging_buffer, 0, self.size);
     }
 

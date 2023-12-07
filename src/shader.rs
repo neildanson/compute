@@ -41,9 +41,8 @@ impl<'a> Shader<'a> {
 
 
     pub fn execute(&mut self, buffers : &[&Buffer], x : u32, y : u32, z : u32) -> Option<()>
-
     {
-        let mut entries: Vec<_> = buffers
+        let entries: Vec<_> = buffers
             .iter()
             .map(|buffer| buffer.to_bind_group_entry())
             .collect();
@@ -78,16 +77,17 @@ impl<'a> Shader<'a> {
             cpass.dispatch_workgroups(x, y, z); 
         }
 
-        None
-        /*
+        
+        
         self.buffers
             .iter()
             .for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
-        self.result_buffer.copy_to_buffer(&mut encoder);
 
         // Submits command encoder for processing
         self.queue.submit(Some(encoder.finish()));
 
+        None
+        /*
         let buffer_slice = self.result_buffer.staging_buffer.slice(..);
         // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
         let (sender, receiver) = channel();
