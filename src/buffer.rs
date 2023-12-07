@@ -1,4 +1,7 @@
+use std::rc::Rc;
+
 use crate::binding::Binding;
+use bytemuck::Pod;
 use wgpu::util::DeviceExt;
 
 pub enum Usage {
@@ -31,6 +34,29 @@ impl ReadWrite {
     }
 }
 
+pub enum Data<'a, R:Pod> {
+    Slice(&'a [R]),
+    Single(R),
+    Empty(usize),
+}
+
+impl <'a, R:Pod> Data<'a, R> {
+    pub fn size(&self) -> usize {
+        match self {
+            Data::Slice(data) => std::mem::size_of::<R>() * data.len(),
+            Data::Single(_) => std::mem::size_of::<R>(),
+            Data::Empty(size) => *size,
+        }
+    }
+    pub fn bytes(&self) -> Rc<[u8]> {
+        match self {
+            Data::Slice(data) => Rc::from(bytemuck::cast_slice(data)),
+            Data::Single(data) => Rc::from(bytemuck::bytes_of(data)),
+            Data::Empty(size) => Rc::from(bytemuck::cast_slice(&vec![0; *size])),
+        }
+    }
+}
+
 pub struct BindingParameters {
     pub group: u32,
     pub binding: u32,
@@ -43,20 +69,20 @@ pub struct Buffer {
     pub staging_buffer: wgpu::Buffer,
     pub size: wgpu::BufferAddress,
     pub binding: u32,
-    pub group: u32, //TODO
+    pub group: u32,
 }
 
 impl Buffer {
-    pub fn new<T>(
+    pub fn new<T:Pod>(
         device: &wgpu::Device,
         parameters: BindingParameters,
-        data: T,
+        data: Data<T>,
         name: Option<&str>,
     ) -> Self
     where
         T: bytemuck::Pod,
     {
-        let size = std::mem::size_of::<T>();
+        let size = data.size();
         let size = size as wgpu::BufferAddress;
 
         let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -68,41 +94,7 @@ impl Buffer {
 
         let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Storage Buffer"),
-            contents: bytemuck::bytes_of(&data),
-            usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
-        });
-
-        Buffer {
-            storage_buffer,
-            staging_buffer,
-            size,
-            binding: parameters.binding,
-            group: parameters.group,
-        }
-    }
-
-    pub fn new_from_slice<T>(
-        device: &wgpu::Device,
-        parameters: BindingParameters,
-        data: &[T],
-        name: Option<&str>,
-    ) -> Self
-    where
-        T: bytemuck::Pod,
-    {
-        let slice_size = data.len() * std::mem::size_of::<T>();
-        let size = slice_size as wgpu::BufferAddress;
-
-        let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: name,
-            size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Storage Buffer"),
-            contents: bytemuck::cast_slice(data),
+            contents: data.bytes().as_ref(),
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
         });
 
@@ -147,6 +139,19 @@ impl Buffer {
             group: parameters.group,
         }
     }
+
+    pub fn read<R : Pod>(&self) -> Vec<R> {
+        /*let data = self.staging_buffer.slice(..).get_mapped_range();
+        let result = data
+            .chunks_exact(std::mem::size_of::<R>())
+            .map(|b| bytemuck::from_bytes(b))
+            .collect::<Vec<_>>();
+        self.staging_buffer.unmap();
+        result*/
+
+        let result = Vec::new();
+        result
+    }
 }
 
 impl Binding for Buffer {
@@ -159,5 +164,9 @@ impl Binding for Buffer {
 
     fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
         encoder.copy_buffer_to_buffer(&self.storage_buffer, 0, &self.staging_buffer, 0, self.size);
+    }
+
+    fn group(&self) -> u32 {
+        self.group
     }
 }

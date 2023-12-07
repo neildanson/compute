@@ -1,13 +1,12 @@
 use crate::binding::Binding;
 use crate::buffer::Buffer;
-use std::{borrow::Cow, fmt::Debug, sync::mpsc::channel};
+use std::{borrow::Cow, fmt::Debug};
 
 use bytemuck::Pod;
 
 pub struct Shader<'a> {
     device: &'a wgpu::Device,
     queue: &'a wgpu::Queue,
-    result_buffer: Buffer,
     compute_pipeline: wgpu::ComputePipeline,
     buffers: Vec<Box<dyn Binding>>,
 }
@@ -18,7 +17,6 @@ impl<'a> Shader<'a> {
         queue: &'a wgpu::Queue,
         src: &str,
         entry_point: &str,
-        result_buffer: Buffer,
     ) -> Self {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
@@ -37,7 +35,6 @@ impl<'a> Shader<'a> {
         Shader {
             device,
             queue,
-            result_buffer,
             compute_pipeline,
             buffers,
         }
@@ -47,9 +44,8 @@ impl<'a> Shader<'a> {
         self.buffers.push(Box::new(buffer));
     }
 
-    pub fn execute<R>(&mut self) -> Option<Vec<R>>
-    where
-        R: Pod + Debug + Copy,
+    pub fn execute(&mut self, x : u32, y : u32, z : u32) -> Option<()>
+    
     {
         let mut entries: Vec<_> = self
             .buffers
@@ -57,9 +53,9 @@ impl<'a> Shader<'a> {
             .map(|buffer| buffer.to_bind_group_entry())
             .collect();
 
-        let result_bge = self.result_buffer.to_bind_group_entry();
+        //let result_bge = self.result_buffer.to_bind_group_entry();
 
-        entries.push(result_bge);
+        //entries.push(result_bge);
 
         //Group by binding.group
 
@@ -82,10 +78,13 @@ impl<'a> Shader<'a> {
             cpass.set_pipeline(&self.compute_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
 
+            
             //TODO - workout group size
-            cpass.dispatch_workgroups(self.result_buffer.size as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+            cpass.dispatch_workgroups(x, y, z); 
         }
 
+        None
+        /*
         self.buffers
             .iter()
             .for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
@@ -118,6 +117,6 @@ impl<'a> Shader<'a> {
             Some(result)
         } else {
             None
-        }
+        }*/
     }
 }

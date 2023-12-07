@@ -1,5 +1,5 @@
 use crate::{
-    buffer::{BindingParameters, Buffer},
+    buffer::{BindingParameters, Buffer, Data},
     shader::Shader,
 };
 use bytemuck::Pod;
@@ -36,37 +36,17 @@ impl Gpu {
         Some(Gpu { device, queue })
     }
 
-    pub fn create_shader<R: Pod>(
-        &self,
-        shader_source: &str,
-        entry_point: &str,
-        result_buffer: Buffer,
-    ) -> Shader {
-        Shader::new::<R>(
-            &self.device,
-            &self.queue,
-            shader_source,
-            entry_point,
-            result_buffer,
-        )
+    pub fn create_shader<R: Pod>(&self, shader_source: &str, entry_point: &str) -> Shader {
+        Shader::new::<R>(&self.device, &self.queue, shader_source, entry_point)
     }
 
     pub fn create_buffer<R: Pod>(
         &self,
-        data: R,
+        data: Data<R>,
         parameters: BindingParameters,
         name: Option<&str>,
     ) -> Buffer {
         Buffer::new::<R>(&self.device, parameters, data, name)
-    }
-
-    pub fn create_buffer_from_slice<R: Pod>(
-        &self,
-        data: &[R],
-        parameters: BindingParameters,
-        name: Option<&str>,
-    ) -> Buffer {
-        Buffer::new_from_slice::<R>(&self.device, parameters, data, name)
     }
 
     pub fn create_readable_buffer<R: Pod>(
