@@ -1,6 +1,5 @@
-use crate::binding::Binding;
 use crate::buffer::Buffer;
-use std::{borrow::Cow, fmt::Debug};
+use std::borrow::Cow;
 
 use bytemuck::Pod;
 
@@ -8,7 +7,7 @@ pub struct Shader<'a> {
     device: &'a wgpu::Device,
     queue: &'a wgpu::Queue,
     compute_pipeline: wgpu::ComputePipeline,
-    buffers: Vec<Box<dyn Binding>>,
+    buffers: Vec<Buffer>,
 }
 
 impl<'a> Shader<'a> {
@@ -40,15 +39,11 @@ impl<'a> Shader<'a> {
         }
     }
 
-    pub fn add_buffer(&mut self, buffer: Buffer) {
-        self.buffers.push(Box::new(buffer));
-    }
 
-    pub fn execute(&mut self, x : u32, y : u32, z : u32) -> Option<()>
-    
+    pub fn execute(&mut self, buffers : &[&Buffer], x : u32, y : u32, z : u32) -> Option<()>
+
     {
-        let mut entries: Vec<_> = self
-            .buffers
+        let mut entries: Vec<_> = buffers
             .iter()
             .map(|buffer| buffer.to_bind_group_entry())
             .collect();

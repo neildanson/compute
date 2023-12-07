@@ -152,10 +152,8 @@ impl Buffer {
         let result = Vec::new();
         result
     }
-}
 
-impl Binding for Buffer {
-    fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
+    pub fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
         wgpu::BindGroupEntry {
             binding: self.binding,
             resource: self.storage_buffer.as_entire_binding(),
@@ -166,7 +164,8 @@ impl Binding for Buffer {
         encoder.copy_buffer_to_buffer(&self.storage_buffer, 0, &self.staging_buffer, 0, self.size);
     }
 
-    fn group(&self) -> u32 {
+    pub fn group(&self) -> u32 {
         self.group
     }
 }
+

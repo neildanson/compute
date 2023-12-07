@@ -48,7 +48,7 @@ async fn run() {
         BindingParameters {
             group: 0,
             binding: 1,
-            usage: Usage::Uniform,
+            usage: Usage::Storage,
             read_write: ReadWrite::Write,
         },
         Some("input"),
@@ -65,12 +65,12 @@ async fn run() {
     );
 
     let mut shader = gpu.create_shader::<u32>(shader_src, "main");
-    shader.add_buffer(input_buffer);
-    shader.add_buffer(color_buffer);
-    shader.add_buffer(result_buffer);
-    shader.execute(input.len() as u32, 1, 1);
+    {
+        let buffers = vec!(&input_buffer, &color_buffer, &result_buffer);
+        shader.execute(&buffers, input.len() as u32, 1, 1);
+    }
 
-    //let result = result_buffer.read::<u32>();
+    let result = result_buffer.read::<u32>();
     //let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
 
     //println!("Steps: [{}]", disp_steps.join(", "));
