@@ -4,9 +4,9 @@ use compute::{
 };
 use std::fmt::Debug;
 
-use bytemuck::{ByteEq, ByteHash, Pod, Zeroable};
+use bytemuck::{Pod, Zeroable};
 
-#[derive(Copy, Clone, Pod, Zeroable, ByteEq, ByteHash, Debug)]
+#[derive(Copy, Clone, Pod, Zeroable, Debug)]
 #[repr(C)]
 pub struct Pair {
     pub a: u32,
