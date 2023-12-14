@@ -1,4 +1,4 @@
-use crate::buffer::Buffer;
+use crate::gpu_compute::Buffer;
 
 pub struct Binding { 
     pub buffer : Buffer, 

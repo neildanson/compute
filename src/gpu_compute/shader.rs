@@ -1,4 +1,4 @@
-use crate::binding::Binding;
+use crate::gpu_compute::Binding;
 use std::borrow::Cow;
 
 use bytemuck::Pod;

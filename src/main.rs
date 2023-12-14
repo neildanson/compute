@@ -1,7 +1,4 @@
-use compute::{
-    buffer::{Parameters, ReadWrite, Usage, Data},
-    gpu::Gpu,
-};
+use compute::gpu_compute::{Parameters, ReadWrite, Usage, Data, Gpu};
 use std::fmt::Debug;
 
 use bytemuck::{Pod, Zeroable};

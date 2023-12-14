@@ -4,7 +4,7 @@ use bytemuck::Pod;
 use itertools::Group;
 use wgpu::util::DeviceExt;
 
-use crate::binding::Binding;
+use crate::gpu_compute::Binding;
 
 pub enum Usage {
     Storage,

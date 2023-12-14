@@ -1,7 +1,4 @@
-use crate::{
-    buffer::{Parameters, Buffer, Data},
-    shader::Shader,
-};
+use crate::gpu_compute::{Parameters, Buffer, Data, Shader};
 use bytemuck::Pod;
 
 pub struct Gpu {

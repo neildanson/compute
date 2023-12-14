@@ -1,4 +1,1 @@
-pub mod binding; 
-pub mod buffer;
-pub mod gpu;
-pub mod shader;
+pub mod gpu_compute;
