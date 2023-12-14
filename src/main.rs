@@ -17,7 +17,7 @@ struct Color {
 }
 
 async fn run() {
-    let input = (0..10)
+    let input = (0..10_000)
         .into_iter()
         .map(|n| Pair { a: n, b: n })
         .collect::<Vec<_>>();
@@ -90,7 +90,7 @@ async fn run() {
     }
 
     let result = result_binding_2.buffer.read::<u32>(&gpu).unwrap();
-    let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
+    let disp_steps: Vec<String> = result.into_iter().take(100).map(|n: u32| n.to_string()).collect();
 
     let end = std::time::Instant::now();
 
