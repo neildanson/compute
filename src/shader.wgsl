@@ -20,10 +20,8 @@ var<storage, read_write> input: array<Pair>;
 @binding(2)
 var<uniform> u_entity: Color;
 
-
-
 @compute
-@workgroup_size(1)
+@workgroup_size(256,1,1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     result[global_id.x] = input[global_id.x].a * input[global_id.x].b * u32(u_entity.color.x);
 }

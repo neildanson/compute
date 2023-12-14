@@ -66,6 +66,8 @@ async fn run() {
         Some("color"),
     ).to_binding(0, 2);
 
+    let start = std::time::Instant::now();
+
     let mut shader = gpu.create_shader::<u32>(shader_src_1, "main");
     {
         let buffers = vec!(&input_buffer, &color_buffer, &result_buffer_1);
@@ -81,7 +83,10 @@ async fn run() {
     let result = result_buffer_2.buffer.read::<u32>(&gpu.device).unwrap();
     let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
 
-    println!("Steps: [{}]", disp_steps.join(", "));
+    let end = std::time::Instant::now();
+
+
+    println!("Time {:?}\nSteps: [{}]", (end - start), disp_steps.join(", "));
 }
 
 fn main() {
