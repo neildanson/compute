@@ -21,4 +21,8 @@ impl Binding {
             resource: self.buffer.gpu_buffer.as_entire_binding(),
         }
     }
+
+    pub fn to_new_binding(self, group : u32, binding : u32) -> Binding {
+        Binding::new(self.buffer, group, binding)
+    }
 }
