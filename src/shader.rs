@@ -1,4 +1,4 @@
-use crate::buffer::Buffer;
+use crate::binding::Binding;
 use std::borrow::Cow;
 
 use bytemuck::Pod;
@@ -36,11 +36,11 @@ impl<'a> Shader<'a> {
     }
 
 
-    pub fn execute(&mut self, buffers : &[&Buffer], x : u32, y : u32, z : u32) 
+    pub fn execute(&mut self, bindings : &[&Binding], x : u32, y : u32, z : u32) 
     {
-        let entries: Vec<_> = buffers
+        let entries: Vec<_> = bindings
             .iter()
-            .map(|buffer| buffer.to_bind_group_entry())
+            .map(|binding| binding.to_bind_group_entry())
             .collect();
 
         //let result_bge = self.result_buffer.to_bind_group_entry();
@@ -71,9 +71,9 @@ impl<'a> Shader<'a> {
             cpass.dispatch_workgroups(x, y, z); 
         }
 
-        buffers
+        bindings
             .iter()
-            .for_each(|buffer| buffer.copy_to_buffer(&mut encoder));
+            .for_each(|binding| binding.buffer.copy_to_buffer(&mut encoder));
 
         // Submits command encoder for processing
         self.queue.submit(Some(encoder.finish()));

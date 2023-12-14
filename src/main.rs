@@ -1,5 +1,5 @@
 use compute::{
-    buffer::{BindingParameters, ReadWrite, Usage, Data},
+    buffer::{Parameters, ReadWrite, Usage, Data},
     gpu::Gpu,
 };
 use std::fmt::Debug;
@@ -36,46 +36,38 @@ async fn run() {
 
     let result_buffer_1 = gpu.create_readable_buffer::<u32>(
         input.len(),
-        BindingParameters {
-            group: 0,
-            binding: 0,
+        Parameters {
             usage: Usage::Storage,
             read_write: ReadWrite::Read,
         },
         Some("result"),
-    );
+    ).to_binding(0, 0);
 
     let result_buffer_2 = gpu.create_readable_buffer::<u32>(
         input.len(),
-        BindingParameters {
-            group: 0,
-            binding: 1,
+        Parameters {
             usage: Usage::Storage,
             read_write: ReadWrite::Read,
         },
         Some("result"),
-    );
+    ).to_binding(0, 1);
 
     let input_buffer = gpu.create_buffer(
         Data::Slice(&input),
-        BindingParameters {
-            group: 0,
-            binding: 1,
+        Parameters {
             usage: Usage::Storage,
             read_write: ReadWrite::Write,
         },
         Some("input"),
-    );
+    ).to_binding(0, 1);
     let color_buffer = gpu.create_buffer(
         Data::Single(color),
-        BindingParameters {
-            group: 0,
-            binding: 2,
+        Parameters {
             usage: Usage::Uniform,
             read_write: ReadWrite::Write,
         },
         Some("color"),
-    );
+    ).to_binding(0, 2);
 
     let mut shader = gpu.create_shader::<u32>(shader_src_1, "main");
     {
@@ -89,7 +81,7 @@ async fn run() {
         shader_2.execute(&buffers, input.len() as u32, 1, 1);
     }
 
-    let result = result_buffer_2.read::<u32>(&gpu.device).unwrap();
+    let result = result_buffer_1.buffer.read::<u32>(&gpu.device).unwrap();
     let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
 
     println!("Steps: [{}]", disp_steps.join(", "));

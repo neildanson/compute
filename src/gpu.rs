@@ -1,5 +1,5 @@
 use crate::{
-    buffer::{BindingParameters, Buffer, Data},
+    buffer::{Parameters, Buffer, Data},
     shader::Shader,
 };
 use bytemuck::Pod;
@@ -43,7 +43,7 @@ impl Gpu {
     pub fn create_buffer<R: Pod>(
         &self,
         data: Data<R>,
-        parameters: BindingParameters,
+        parameters: Parameters,
         name: Option<&str>,
     ) -> Buffer {
         Buffer::new::<R>(&self.device, parameters, data, name)
@@ -52,7 +52,7 @@ impl Gpu {
     pub fn create_readable_buffer<R: Pod>(
         &self,
         size: usize,
-        parameters: BindingParameters,
+        parameters: Parameters,
         name: Option<&str>,
     ) -> Buffer {
         Buffer::new_empty::<R>(&self.device, parameters, size, name)

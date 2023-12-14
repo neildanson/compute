@@ -1,7 +1,10 @@
 use std::{rc::Rc, sync::mpsc::channel};
 
 use bytemuck::Pod;
+use itertools::Group;
 use wgpu::util::DeviceExt;
+
+use crate::binding::Binding;
 
 pub enum Usage {
     Storage,
@@ -56,9 +59,8 @@ impl <'a, R:Pod> Data<'a, R> {
     }
 }
 
-pub struct BindingParameters {
-    pub group: u32,
-    pub binding: u32,
+pub struct Parameters {
+    
     pub usage: Usage,
     pub read_write: ReadWrite,
 }
@@ -67,13 +69,12 @@ pub struct Buffer {
     pub gpu_buffer: wgpu::Buffer,
     pub ram_buffer: wgpu::Buffer,
     pub size: wgpu::BufferAddress,
-    pub binding: u32,
 }
 
 impl Buffer {
     pub fn new<T:Pod>(
         device: &wgpu::Device,
-        parameters: BindingParameters,
+        parameters: Parameters,
         data: Data<T>,
         name: Option<&str>,
     ) -> Self
@@ -102,13 +103,12 @@ impl Buffer {
             gpu_buffer,
             ram_buffer,
             size,
-            binding: parameters.binding,
         }
     }
 
     pub fn new_empty<R>(
         device: &wgpu::Device,
-        parameters: BindingParameters,
+        parameters: Parameters,
         size: usize,
         name: Option<&str>,
     ) -> Self
@@ -134,7 +134,6 @@ impl Buffer {
             gpu_buffer,
             ram_buffer,
             size: size as wgpu::BufferAddress,
-            binding: parameters.binding,
         }
     }
 
@@ -166,15 +165,12 @@ impl Buffer {
         }
     }
 
-    pub fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
-        wgpu::BindGroupEntry {
-            binding: self.binding,
-            resource: self.gpu_buffer.as_entire_binding(),
-        }
-    }
-
     pub fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
         encoder.copy_buffer_to_buffer(&self.gpu_buffer, 0, &self.ram_buffer, 0, self.size);
+    }
+
+    pub fn to_binding(self, group : u32, binding : u32) -> Binding {
+        Binding::new(self, group, binding)
     }
 }
 
