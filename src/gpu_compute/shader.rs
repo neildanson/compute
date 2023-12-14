@@ -43,11 +43,7 @@ impl<'a> Shader<'a> {
             .map(|binding| binding.to_bind_group_entry())
             .collect();
 
-        //let result_bge = self.result_buffer.to_bind_group_entry();
-
-        //entries.push(result_bge);
-
-        //Group by binding.group
+        //TODO - Group by binding.group
 
         let bind_group_layout = self.compute_pipeline.get_bind_group_layout(0);
 
@@ -71,6 +67,7 @@ impl<'a> Shader<'a> {
             cpass.dispatch_workgroups(x, y, z); 
         }
 
+        //TODO - do we always need to copy?
         bindings
             .iter()
             .for_each(|binding| binding.buffer.copy_to_buffer(&mut encoder));
