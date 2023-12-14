@@ -1,8 +1,8 @@
-use crate::gpu_compute::{Parameters, Buffer, Data, Shader};
+use crate::gpu_compute::{Buffer, Data, Parameters, Shader};
 use bytemuck::Pod;
 
 pub struct Gpu {
-    pub device: wgpu::Device,
+    pub(super) device: wgpu::Device,
     queue: wgpu::Queue,
 }
 

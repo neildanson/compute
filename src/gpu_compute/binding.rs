@@ -1,28 +1,28 @@
 use crate::gpu_compute::Buffer;
 
-pub struct Binding { 
-    pub buffer : Buffer, //TODO - hide me 
-    pub(super) group : u32,
-    pub(super) binding : u32
+pub struct Binding {
+    pub buffer: Buffer, //TODO - hide me
+    pub(super) group: u32,
+    pub(super) binding: u32,
 }
 
 impl Binding {
-    pub fn new(buffer : Buffer, group : u32, binding : u32) -> Self {
+    pub fn new(buffer: Buffer, group: u32, binding: u32) -> Self {
         Self {
-            buffer, 
+            buffer,
             group,
-            binding
+            binding,
         }
     }
 
-    pub(super)fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
+    pub(super) fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
         wgpu::BindGroupEntry {
             binding: self.binding,
             resource: self.buffer.gpu_buffer.as_entire_binding(),
         }
     }
 
-    pub fn to_new_binding(self, group : u32, binding : u32) -> Binding {
+    pub fn to_new_binding(self, group: u32, binding: u32) -> Binding {
         Binding::new(self.buffer, group, binding)
     }
 }

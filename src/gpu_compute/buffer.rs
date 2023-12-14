@@ -6,6 +6,8 @@ use wgpu::util::DeviceExt;
 
 use crate::gpu_compute::Binding;
 
+use super::Gpu;
+
 pub enum Usage {
     Storage,
     Uniform,
@@ -36,13 +38,13 @@ impl ReadWrite {
     }
 }
 
-pub enum Data<'a, R:Pod> {
+pub enum Data<'a, R: Pod> {
     Slice(&'a [R]),
     Single(R),
     Empty(usize),
 }
 
-impl <'a, R:Pod> Data<'a, R> {
+impl<'a, R: Pod> Data<'a, R> {
     pub fn size(&self) -> usize {
         match self {
             Data::Slice(data) => std::mem::size_of::<R>() * data.len(),
@@ -71,7 +73,7 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn new<T:Pod>(
+    pub fn new<T: Pod>(
         device: &wgpu::Device,
         parameters: Parameters,
         data: Data<T>,
@@ -90,7 +92,7 @@ impl Buffer {
             mapped_at_creation: false,
         });
 
-        let bytes = data.bytes();   
+        let bytes = data.bytes();
 
         let gpu_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Storage Buffer"),
@@ -136,7 +138,7 @@ impl Buffer {
         }
     }
 
-    pub fn read<R : Pod>(&self, device : &wgpu::Device) -> Option<Vec<R>> {
+    pub fn read<R: Pod>(&self, gpu: &Gpu) -> Option<Vec<R>> {
         let buffer_slice = self.ram_buffer.slice(..);
         // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
         let (sender, receiver) = channel();
@@ -145,7 +147,7 @@ impl Buffer {
         // Poll the device in a blocking manner so that our future resolves.
         // In an actual application, `device.poll(...)` should
         // be called in an event loop or on another thread.
-        device.poll(wgpu::Maintain::Wait);
+        gpu.device.poll(wgpu::Maintain::Wait);
 
         // Awaits until `buffer_future` can be read from
         if let Ok(Ok(())) = receiver.recv() {
@@ -164,12 +166,11 @@ impl Buffer {
         }
     }
 
-    pub fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
+    pub(super) fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
         encoder.copy_buffer_to_buffer(&self.gpu_buffer, 0, &self.ram_buffer, 0, self.size);
     }
 
-    pub fn to_binding(self, group : u32, binding : u32) -> Binding {
+    pub fn to_binding(self, group: u32, binding: u32) -> Binding {
         Binding::new(self, group, binding)
     }
 }
-

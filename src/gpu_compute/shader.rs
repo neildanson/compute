@@ -35,9 +35,7 @@ impl<'a> Shader<'a> {
         }
     }
 
-
-    pub fn execute(&mut self, bindings : &[&Binding], x : u32, y : u32, z : u32) 
-    {
+    pub fn execute(&mut self, bindings: &[&Binding], x: u32, y: u32, z: u32) {
         let entries: Vec<_> = bindings
             .iter()
             .map(|binding| binding.to_bind_group_entry())
@@ -64,7 +62,7 @@ impl<'a> Shader<'a> {
             cpass.set_pipeline(&self.compute_pipeline);
             cpass.set_bind_group(0, &bind_group, &[]);
 
-            cpass.dispatch_workgroups(x, y, z); 
+            cpass.dispatch_workgroups(x, y, z);
         }
 
         //TODO - do we always need to copy?
