@@ -4,6 +4,7 @@ pub struct Binding {
     pub buffer: Buffer, //TODO - hide me
     pub(super) group: u32,
     pub(super) binding: u32,
+    pub(super) needs_copy: bool, //TODO - hide me
 }
 
 impl Binding {
@@ -12,6 +13,7 @@ impl Binding {
             buffer,
             group,
             binding,
+            needs_copy: true,
         }
     }
 
@@ -22,7 +24,12 @@ impl Binding {
         }
     }
 
-    pub fn to_new_binding(self, group: u32, binding: u32) -> Binding {
-        Binding::new(self.buffer, group, binding)
+    pub fn to_new_binding(self, group: u32, binding: u32) -> Self {
+        Self {
+            buffer: self.buffer,
+            group,
+            binding,
+            needs_copy: false,
+        }
     }
 }
