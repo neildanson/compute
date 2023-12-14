@@ -1,7 +1,6 @@
 use std::{rc::Rc, sync::mpsc::channel};
 
 use bytemuck::Pod;
-use itertools::Group;
 use wgpu::util::DeviceExt;
 
 use crate::gpu_compute::Binding;
