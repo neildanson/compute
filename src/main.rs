@@ -40,7 +40,7 @@ async fn run() {
             },
             Some("result"),
         )
-        .to_binding(0, 0);
+        .to_binding(1, 0);
 
     let result_binding_2 = gpu
         .create_readable_buffer::<u32>(

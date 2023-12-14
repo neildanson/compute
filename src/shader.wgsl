@@ -7,7 +7,7 @@ struct Color {
     color: vec4<f32>,
 };
 
-@group(0)
+@group(1)
 @binding(0)
 var<storage, read_write> result: array<u32>; 
 
