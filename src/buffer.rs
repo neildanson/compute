@@ -64,11 +64,10 @@ pub struct BindingParameters {
 }
 
 pub struct Buffer {
-    pub storage_buffer: wgpu::Buffer,
-    pub staging_buffer: wgpu::Buffer,
+    pub gpu_buffer: wgpu::Buffer,
+    pub ram_buffer: wgpu::Buffer,
     pub size: wgpu::BufferAddress,
     pub binding: u32,
-    pub group: u32,
 }
 
 impl Buffer {
@@ -84,7 +83,7 @@ impl Buffer {
         let size = data.size();
         let size = size as wgpu::BufferAddress;
 
-        let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let ram_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
             size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
@@ -93,18 +92,17 @@ impl Buffer {
 
         let bytes = data.bytes();   
 
-        let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let gpu_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Storage Buffer"),
             contents: bytes.as_ref(),
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
         });
 
         Buffer {
-            storage_buffer,
-            staging_buffer,
+            gpu_buffer,
+            ram_buffer,
             size,
             binding: parameters.binding,
-            group: parameters.group,
         }
     }
 
@@ -118,14 +116,14 @@ impl Buffer {
         R: bytemuck::Pod,
     {
         let size = size * std::mem::size_of::<R>();
-        let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let ram_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
             size: size as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        let storage_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let gpu_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: name, //Name of buffer
             size: size as wgpu::BufferAddress,
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
@@ -133,16 +131,15 @@ impl Buffer {
         });
 
         Buffer {
-            storage_buffer,
-            staging_buffer,
+            gpu_buffer,
+            ram_buffer,
             size: size as wgpu::BufferAddress,
             binding: parameters.binding,
-            group: parameters.group,
         }
     }
 
     pub fn read<R : Pod>(&self, device : &wgpu::Device) -> Option<Vec<R>> {
-        let buffer_slice = self.staging_buffer.slice(..);
+        let buffer_slice = self.ram_buffer.slice(..);
         // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
         let (sender, receiver) = channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
@@ -161,7 +158,7 @@ impl Buffer {
             // With the current interface, we have to make sure all mapped views are
             // dropped before we unmap the buffer.
             drop(data);
-            self.staging_buffer.unmap(); // Unmaps buffer from memory
+            self.ram_buffer.unmap(); // Unmaps buffer from memory
 
             Some(result)
         } else {
@@ -172,16 +169,12 @@ impl Buffer {
     pub fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
         wgpu::BindGroupEntry {
             binding: self.binding,
-            resource: self.storage_buffer.as_entire_binding(),
+            resource: self.gpu_buffer.as_entire_binding(),
         }
     }
 
     pub fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
-        encoder.copy_buffer_to_buffer(&self.storage_buffer, 0, &self.staging_buffer, 0, self.size);
-    }
-
-    pub fn group(&self) -> u32 {
-        self.group
+        encoder.copy_buffer_to_buffer(&self.gpu_buffer, 0, &self.ram_buffer, 0, self.size);
     }
 }
 

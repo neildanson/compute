@@ -29,11 +29,12 @@ async fn run() {
         color: [10.0, 0.0, 0.0, 1.0],
     };
 
-    let shader_src = include_str!("shader.wgsl");
+    let shader_src_1 = include_str!("shader.wgsl");
+    let shader_src_2 = include_str!("shader_2.wgsl");
 
     let gpu = Gpu::new().await.unwrap();
 
-    let result_buffer = gpu.create_readable_buffer::<u32>(
+    let result_buffer_1 = gpu.create_readable_buffer::<u32>(
         input.len(),
         BindingParameters {
             group: 0,
@@ -43,6 +44,18 @@ async fn run() {
         },
         Some("result"),
     );
+
+    let result_buffer_2 = gpu.create_readable_buffer::<u32>(
+        input.len(),
+        BindingParameters {
+            group: 0,
+            binding: 1,
+            usage: Usage::Storage,
+            read_write: ReadWrite::Read,
+        },
+        Some("result"),
+    );
+
     let input_buffer = gpu.create_buffer(
         Data::Slice(&input),
         BindingParameters {
@@ -64,13 +77,19 @@ async fn run() {
         Some("color"),
     );
 
-    let mut shader = gpu.create_shader::<u32>(shader_src, "main");
+    let mut shader = gpu.create_shader::<u32>(shader_src_1, "main");
     {
-        let buffers = vec!(&input_buffer, &color_buffer, &result_buffer);
+        let buffers = vec!(&input_buffer, &color_buffer, &result_buffer_1);
         shader.execute(&buffers, input.len() as u32, 1, 1);
     }
 
-    let result = result_buffer.read::<u32>(&gpu.device).unwrap();
+    let mut shader_2 = gpu.create_shader::<u32>(shader_src_2, "main");
+    {
+        let buffers = vec!(&result_buffer_1, &result_buffer_2);
+        shader_2.execute(&buffers, input.len() as u32, 1, 1);
+    }
+
+    let result = result_buffer_2.read::<u32>(&gpu.device).unwrap();
     let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
 
     println!("Steps: [{}]", disp_steps.join(", "));
