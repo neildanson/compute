@@ -60,15 +60,14 @@ impl <'a, R:Pod> Data<'a, R> {
 }
 
 pub struct Parameters {
-    
     pub usage: Usage,
     pub read_write: ReadWrite,
 }
 
 pub struct Buffer {
-    pub gpu_buffer: wgpu::Buffer,
-    pub ram_buffer: wgpu::Buffer,
-    pub size: wgpu::BufferAddress,
+    pub(super) gpu_buffer: wgpu::Buffer,
+    ram_buffer: wgpu::Buffer,
+    size: wgpu::BufferAddress,
 }
 
 impl Buffer {

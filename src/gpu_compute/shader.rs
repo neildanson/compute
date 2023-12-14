@@ -10,7 +10,7 @@ pub struct Shader<'a> {
 }
 
 impl<'a> Shader<'a> {
-    pub fn new<R: Pod>(
+    pub(super) fn new<R: Pod>(
         device: &'a wgpu::Device,
         queue: &'a wgpu::Queue,
         src: &str,
