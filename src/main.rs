@@ -81,7 +81,7 @@ async fn run() {
         shader_2.execute(&buffers, input.len() as u32, 1, 1);
     }
 
-    let result = result_buffer_1.buffer.read::<u32>(&gpu.device).unwrap();
+    let result = result_buffer_2.buffer.read::<u32>(&gpu.device).unwrap();
     let disp_steps: Vec<String> = result.into_iter().map(|n: u32| n.to_string()).collect();
 
     println!("Steps: [{}]", disp_steps.join(", "));
