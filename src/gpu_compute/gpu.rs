@@ -33,8 +33,8 @@ impl Gpu {
         Some(Gpu { device, queue })
     }
 
-    pub fn create_shader<R: Pod>(&self, shader_source: &str, entry_point: &str) -> Shader {
-        Shader::new::<R>(&self.device, &self.queue, shader_source, entry_point)
+    pub fn create_shader(&self, shader_source: &str, entry_point: &str) -> Shader {
+        Shader::new(&self.device, &self.queue, shader_source, entry_point)
     }
 
     pub fn create_buffer<R: Pod>(
