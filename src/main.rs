@@ -1,7 +1,10 @@
 use compute::gpu_compute::{Data, Gpu, Parameters, ReadWrite, Usage};
 use std::fmt::Debug;
-
+use minifb::{Key, Window, WindowOptions};
 use bytemuck::{Pod, Zeroable};
+
+const WIDTH: usize = 256;
+const HEIGHT: usize = 256;
 
 #[derive(Copy, Clone, Pod, Zeroable, Debug)]
 #[repr(C)]
@@ -13,21 +16,21 @@ pub struct ScreenCoordinate {
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
 struct Ray {
-    origin: [f32; 3],
-    direction: [f32; 3],
+    origin: [f32; 4],
+    direction: [f32; 4],
 }
 
 async fn run() {
     let mut screen_coordinates = Vec::new();
-    for x in 0 .. 1920 {
-        for y in 0 .. 1080 {
+    for x in 0 .. HEIGHT {
+        for y in 0 .. WIDTH {
             let coord = ScreenCoordinate { x : x as f32, y : y as f32 };
             screen_coordinates.push(coord);
         }
     }
 
 
-    let shader_src_1 = include_str!("ray_generation.wgsl");
+    let ray_generation_shader = include_str!("ray_generation.wgsl");
     let _shader_src_2 = include_str!("shader_2.wgsl");
 
     let gpu = Gpu::new().await.unwrap();
@@ -39,12 +42,12 @@ async fn run() {
             usage: Usage::Storage,
             read_write: ReadWrite::Write,
         },
-        Some("input"),
+        Some("screen_coordinates"),
     )
     .to_binding(0, 0);
 
-    let  generated_rays_binding = gpu
-        .create_readable_buffer::<u32>(
+    let generated_rays_binding = gpu
+        .create_readable_buffer::<Ray>(
             screen_coordinates.len(),
             Parameters {
                 usage: Usage::Storage,
@@ -78,12 +81,10 @@ async fn run() {
         )
         .to_binding(0, 2);*/
 
-    let start = std::time::Instant::now();
-
-    let mut shader = gpu.create_shader(shader_src_1, "main");
+    let mut shader = gpu.create_shader(ray_generation_shader, "main");
     {
         let bindings = vec![&screen_coordinates_binding, &generated_rays_binding];
-        shader.execute(&bindings, 1, 1, 1);
+        shader.execute(&bindings, 8, 8, 1);
     }
 
     /*
@@ -95,15 +96,37 @@ async fn run() {
     }
     */
     let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
-    let disp_steps: Vec<String> = result.into_iter().take(100).map(|r: Ray| format!("{:?}", r)).collect();
 
-    let end = std::time::Instant::now();
+    let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
-    println!(
-        "Time {:?}\nSteps: [{}]",
-        (end - start),
-        disp_steps.join(", ")
-    );
+    let mut window = Window::new(
+        "Test - ESC to exit",
+        WIDTH,
+        HEIGHT,
+        WindowOptions::default() ,
+    )
+    .unwrap_or_else(|e| {
+        panic!("{}", e);
+    });
+
+    // Limit to max ~60 fps update rate
+    window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
+
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        for (idx, i) in buffer.iter_mut().enumerate() {
+            if idx < result.len() {
+                let r = result[idx].origin[0] * 255.0;
+                let g = result[idx].origin[1] * 255.0;
+                let b = result[idx].origin[2] * 255.0;
+                *i = (r as u32) << 16 | (g as u32) << 8 | b as u32;
+            }            
+        }
+
+        // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
+        window
+            .update_with_buffer(&buffer, WIDTH, HEIGHT)
+            .unwrap();
+    }
 }
 
 fn main() {

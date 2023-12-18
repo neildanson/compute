@@ -1,5 +1,4 @@
 use crate::gpu_compute::Binding;
-use bytemuck::Pod;
 use std::{borrow::Cow, collections::HashMap};
 
 pub struct Shader<'a> {
