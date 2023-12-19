@@ -118,7 +118,8 @@ async fn run() {
                 let r = result[idx].origin[0] * 255.0;
                 let g = result[idx].origin[1] * 255.0;
                 let b = result[idx].origin[2] * 255.0;
-                *i = (r as u32) << 16 | (g as u32) << 8 | b as u32;
+                let a = result[idx].origin[3] * 255.0;
+                *i = (a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | b as u32;
             }            
         }
 

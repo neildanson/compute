@@ -20,21 +20,24 @@ var<storage, read_write> result: array<Ray>;
 @compute
 @workgroup_size(8,8)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    //These are effectively constants
+    let grid_size_x = 8;
+    let grid_size_y = 8;
     let WIDTH = 256;
     let HEIGHT = 256;
+    let grid_cell_size_x = WIDTH / grid_size_x; 
+    let grid_cell_size_y = HEIGHT / grid_size_y;
+
     let grid_x = i32(global_id.x); 
     let grid_y = i32(global_id.y); 
-    let mx = WIDTH / 8; 
-    let my = HEIGHT / 8;
 
-    for (var x : i32 = 0; x < mx; x = x + 1) {
-        for (var y : i32 = 0; y < my; y = y + 1) {
-            let x_pos = grid_x * mx + x;
-            let y_pos = grid_y * my + y;
-            let array_pos = x_pos * WIDTH + y_pos;
+    let start_pos = (grid_y * WIDTH * grid_size_y) + (grid_x * grid_cell_size_x);
+    for (var x : i32 = 0; x < grid_cell_size_x; x = x + 1) {
+        for (var y : i32 = 0; y < grid_cell_size_y; y = y + 1) {
+            let array_pos = start_pos + x + (y * WIDTH);
 
-            let r = f32(x_pos) / f32(WIDTH);
-            let g = f32(y_pos) / f32(HEIGHT);
+            let r = screen_coordinates[array_pos].x / f32(WIDTH);
+            let g = screen_coordinates[array_pos].y / f32(HEIGHT);
             let b = 0.0;
 
             let ray = Ray(vec4<f32>(r, g, b, 1.0), 
