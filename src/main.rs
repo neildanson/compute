@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use minifb::{Key, Window, WindowOptions};
 use bytemuck::{Pod, Zeroable};
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 256;
+const WIDTH: usize = 1920;
+const HEIGHT: usize = 1080;
 
 #[derive(Copy, Clone, Pod, Zeroable, Debug)]
 #[repr(C)]
@@ -46,6 +46,28 @@ async fn run() {
     )
     .to_binding(0, 0);
 
+    let width_binding = gpu
+    .create_buffer(
+        Data::Single(WIDTH as i32),
+        Parameters {
+            usage: Usage::Uniform,
+            read_write: ReadWrite::Write,
+        },
+        Some("screen_coordinates"),
+    )
+    .to_binding(0, 1);
+
+    let height_binding = gpu
+    .create_buffer(
+        Data::Single(HEIGHT as i32),
+        Parameters {
+            usage: Usage::Uniform,
+            read_write: ReadWrite::Write,
+        },
+        Some("screen_coordinates"),
+    )
+    .to_binding(0, 2);
+
     let generated_rays_binding = gpu
         .create_readable_buffer::<Ray>(
             screen_coordinates.len(),
@@ -55,7 +77,7 @@ async fn run() {
             },
             Some("result"),
         )
-        .to_binding(0, 1);
+        .to_binding(0, 3);
 
     let _result_binding_2 = gpu
         .create_readable_buffer::<u32>(
@@ -110,7 +132,7 @@ async fn run() {
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {
-            let bindings = vec![&screen_coordinates_binding, &generated_rays_binding];
+            let bindings = vec![&screen_coordinates_binding, &width_binding, &height_binding, &generated_rays_binding];
             shader.execute(&bindings, 16, 16, 1);
         }
         let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
