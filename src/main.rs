@@ -22,8 +22,8 @@ struct Ray {
 
 async fn run() {
     let mut screen_coordinates = Vec::new();
-    for x in 0 .. HEIGHT {
-        for y in 0 .. WIDTH {
+    for y in 0 .. HEIGHT {
+        for x in 0 .. WIDTH {
             let coord = ScreenCoordinate { x : x as f32, y : y as f32 };
             screen_coordinates.push(coord);
         }
@@ -82,10 +82,7 @@ async fn run() {
         .to_binding(0, 2);*/
 
     let mut shader = gpu.create_shader(ray_generation_shader, "main");
-    {
-        let bindings = vec![&screen_coordinates_binding, &generated_rays_binding];
-        shader.execute(&bindings, 8, 8, 1);
-    }
+    
 
     /*
     let result_binding_1 = generated_rays.to_new_binding(0, 1);
@@ -95,7 +92,6 @@ async fn run() {
         shader_2.execute(&bindings, 1, 1, 1);
     }
     */
-    let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
@@ -113,6 +109,12 @@ async fn run() {
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
+        {
+            let bindings = vec![&screen_coordinates_binding, &generated_rays_binding];
+            shader.execute(&bindings, 16, 16, 1);
+        }
+        let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
+
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
                 let r = result[idx].origin[0] * 255.0;

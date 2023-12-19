@@ -18,11 +18,11 @@ var<storage, read> screen_coordinates: array<ScreenCoordinate>;
 var<storage, read_write> result: array<Ray>; 
 
 @compute
-@workgroup_size(8,8)
+@workgroup_size(16,16)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     //These are effectively constants
-    let grid_size_x = 8;
-    let grid_size_y = 8;
+    let grid_size_x = 16;
+    let grid_size_y = 16;
     let WIDTH = 256;
     let HEIGHT = 256;
     let grid_cell_size_x = WIDTH / grid_size_x; 
