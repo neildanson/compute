@@ -1,5 +1,4 @@
 use compute::gpu_compute::{Data, Gpu, Parameters, ReadWrite, Usage};
-use std::fmt::Debug;
 use minifb::{Key, Window, WindowOptions};
 use bytemuck::{Pod, Zeroable};
 
@@ -16,8 +15,25 @@ pub struct ScreenCoordinate {
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
 struct Ray {
+    screen_coordinate: ScreenCoordinate,
     origin: [f32; 4],
     direction: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable, Debug)]
+struct Sphere {
+    origin: [f32; 3],
+    radius: f32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable, Debug)]
+struct Intersection { 
+    ray : Ray,
+    //distance : f32,
+    //sphere : Sphere,
+    is_hit : i32,
 }
 
 async fn run() {
@@ -29,9 +45,15 @@ async fn run() {
         }
     }
 
+    let mut spheres = Vec::new();
+    for i in 0 .. 100 {
+        let sphere = Sphere { origin : [i as f32, 0.0, 0.0], radius : 1.0 };
+        spheres.push(sphere);
+    }
+
 
     let ray_generation_shader = include_str!("ray_generation.wgsl");
-    let _shader_src_2 = include_str!("shader_2.wgsl");
+    let ray_intersection_shader = include_str!("ray_intersection.wgsl");
 
     let gpu = Gpu::new().await.unwrap();
 
@@ -79,8 +101,18 @@ async fn run() {
         )
         .to_binding(0, 3);
 
-    let _result_binding_2 = gpu
-        .create_readable_buffer::<u32>(
+    let spheres_binding = gpu
+        .create_buffer(Data::Slice(&spheres),
+            Parameters {
+                usage: Usage::Storage,
+                read_write: ReadWrite::Write,
+            },
+            Some("result"),
+        )
+        .to_binding(0, 0);
+
+    let generated_intersections_binding = gpu
+        .create_readable_buffer::<Intersection>(
             screen_coordinates.len(),
             Parameters {
                 usage: Usage::Storage,
@@ -88,32 +120,11 @@ async fn run() {
             },
             Some("result"),
         )
-        .to_binding(0, 0);
+        .to_binding(0, 1);
 
-    
-    
-    /*let color_binding = gpu
-        .create_buffer(
-            Data::Single(color),
-            Parameters {
-                usage: Usage::Uniform,
-                read_write: ReadWrite::Write,
-            },
-            Some("color"),
-        )
-        .to_binding(0, 2);*/
 
-    let mut shader = gpu.create_shader(ray_generation_shader, "main");
-    
-
-    /*
-    let result_binding_1 = generated_rays.to_new_binding(0, 1);
-    let mut shader_2 = gpu.create_shader::<u32>(shader_src_2, "main");
-    {
-        let bindings = vec![&result_binding_1, &result_binding_2];
-        shader_2.execute(&bindings, 1, 1, 1);
-    }
-    */
+    let mut ray_generation_shader = gpu.create_shader(ray_generation_shader, "main");
+    let mut ray_intersection_shader = gpu.create_shader(ray_intersection_shader, "main");
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
@@ -133,17 +144,19 @@ async fn run() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {
             let bindings = vec![&screen_coordinates_binding, &width_binding, &height_binding, &generated_rays_binding];
-            shader.execute(&bindings, 16, 16, 1);
+            ray_generation_shader.execute(&bindings, 16, 16, 1);
+        
+            let bindings = vec![&spheres_binding, &generated_rays_binding, &generated_intersections_binding];
+            ray_intersection_shader.execute(&bindings, 16, 16, 1);
         }
-        let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
+        let result = generated_intersections_binding.buffer.read::<Intersection>(&gpu).unwrap();
 
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
-                let r = result[idx].origin[0] * 255.0;
-                let g = result[idx].origin[1] * 255.0;
-                let b = result[idx].origin[2] * 255.0;
-                let a = result[idx].origin[3] * 255.0;
-                *i = (a as u32) << 24 | (r as u32) << 16 | (g as u32) << 8 | b as u32;
+                if result[idx].is_hit == 1 {
+                    *i = 0xFF0000FF;
+                    continue;
+                }
             }            
         }
 
