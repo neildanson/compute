@@ -4,9 +4,9 @@ struct ScreenCoordinate {
 }
 
 struct Ray {
-    screen_coordinates: ScreenCoordinate,
     origin: vec4<f32>,
     direction: vec4<f32>,
+    screen_coordinates: ScreenCoordinate,
 }
 
 struct Camera {
@@ -57,7 +57,7 @@ fn recenter_y(y : f32, half_height : f32) -> f32 {
 fn get_ray(screen_coordinate : ScreenCoordinate, half_width : f32, half_height :f32, camera : Camera) -> Ray {
     let right = camera.right * (recenter_x(screen_coordinate.x, half_width));
     let up = camera.up * (recenter_y(screen_coordinate.y, half_height));
-    let ray = Ray(screen_coordinate, vec4(camera.position, 1.0), vec4(normalize(right + up + camera.forward), 1.0));
+    let ray = Ray(vec4(camera.position, 1.0), vec4(normalize(right + up + camera.forward), 1.0), screen_coordinate);
     return ray;
 }
 

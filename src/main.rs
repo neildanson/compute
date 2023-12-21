@@ -8,16 +8,16 @@ const HEIGHT: usize = 1080;
 #[derive(Copy, Clone, Pod, Zeroable, Debug)]
 #[repr(C)]
 pub struct ScreenCoordinate {
-    pub x: f32,
-    pub y: f32,
+    x: f32,
+    y: f32,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
 struct Ray {
-    screen_coordinate: ScreenCoordinate,
     origin: [f32; 4],
     direction: [f32; 4],
+    screen_coordinate: ScreenCoordinate,
 }
 
 #[repr(C)]
@@ -149,11 +149,18 @@ async fn run() {
             let bindings = vec![&spheres_binding, &generated_rays_binding, &generated_intersections_binding];
             ray_intersection_shader.execute(&bindings, 16, 16, 1);
         }
+        let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
+        for i in result.iter() {
+            let ray = i;    
+            println!("ray: {:?}", ray);
+        }
+
         let result = generated_intersections_binding.buffer.read::<Intersection>(&gpu).unwrap();
 
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
-                if result[idx].is_hit == 1 {
+                let intersection = result[idx];
+                if intersection.is_hit == 1 {
                     *i = 0xFFFFFFFF;
                     continue;
                 }

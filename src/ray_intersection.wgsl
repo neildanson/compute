@@ -4,9 +4,9 @@ struct ScreenCoordinate {
 }
 
 struct Ray {
-    screen_coordinates: ScreenCoordinate,
     origin: vec4<f32>,
     direction: vec4<f32>,
+    screen_coordinates: ScreenCoordinate,
 }
 
 struct Sphere {
