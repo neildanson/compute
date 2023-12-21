@@ -34,6 +34,7 @@ struct Intersection {
     //distance : f32,
     //sphere : Sphere,
     is_hit : i32,
+    _padding : [i32; 3],
 }
 
 async fn run() {
@@ -46,11 +47,10 @@ async fn run() {
     }
 
     let mut spheres = Vec::new();
-    for i in 0 .. 100 {
-        let sphere = Sphere { origin : [i as f32, 0.0, 0.0], radius : 1.0 };
+    for i in 0 .. 1 {
+        let sphere = Sphere { origin : [0.0, 0.0, 15.0], radius : 1.0 };
         spheres.push(sphere);
     }
-
 
     let ray_generation_shader = include_str!("ray_generation.wgsl");
     let ray_intersection_shader = include_str!("ray_intersection.wgsl");
@@ -107,7 +107,7 @@ async fn run() {
                 usage: Usage::Storage,
                 read_write: ReadWrite::Write,
             },
-            Some("result"),
+            Some("spheres"),
         )
         .to_binding(0, 0);
 
@@ -154,7 +154,7 @@ async fn run() {
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
                 if result[idx].is_hit == 1 {
-                    *i = 0xFF0000FF;
+                    *i = 0xFFFFFFFF;
                     continue;
                 }
             }            

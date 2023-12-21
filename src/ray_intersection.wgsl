@@ -1,11 +1,17 @@
+struct ScreenCoordinate {
+    x: f32,
+    y: f32,
+}
+
 struct Ray {
+    screen_coordinates: ScreenCoordinate,
     origin: vec4<f32>,
     direction: vec4<f32>,
 }
 
 struct Sphere {
     position : vec3<f32>,
-     radius : f32,
+    radius : f32,
     
 }
 
@@ -14,6 +20,7 @@ struct Intersection {
     //distance : f32,
     //sphere : Sphere,
     is_hit : i32,
+    _padding : vec3<i32>,
 }
 
 
@@ -33,18 +40,18 @@ var<storage, read_write> result: array<Intersection>;
 var<storage, read> input: array<Ray>; 
 
 fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
-    let diff : vec3<f32> = sphere.position.xyz - ray.origin.xyz;
+    let diff = sphere.position.xyz - ray.origin.xyz;
     let v = dot(diff, ray.direction.xyz);
     if (v < 0.0) {
-        return Intersection(ray, 0);
+        return Intersection(ray, 0, vec3<i32>(0,0,0));
     } else {
         let distance_squared = pow(sphere.radius, 2.0) - (dot(diff, diff) - pow(v,2.0));
         if (distance_squared < 0.0) {
-            return Intersection (ray, 0);
+            return Intersection (ray, 0, vec3<i32>(0,0,0));
         } else {
             let distance = v - sqrt(distance_squared);
 
-            return Intersection (ray, 1);
+            return Intersection (ray, 1, vec3<i32>(0,0,0));
         }
     }
 }
@@ -68,7 +75,7 @@ fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
 //}
 
 @compute
-@workgroup_size(16, 16, 1)
+@workgroup_size(16, 16)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let num_spheres = 1;
     let grid_size_x = 16;
