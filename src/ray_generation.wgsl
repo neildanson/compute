@@ -1,6 +1,8 @@
 struct ScreenCoordinate {
     x: f32,
     y: f32,
+    padding_2: f32,
+    padding_1: f32,
 }
 
 struct Ray {
@@ -63,11 +65,11 @@ fn get_ray(screen_coordinate : ScreenCoordinate, half_width : f32, half_height :
 
 
 @compute
-@workgroup_size(8,8)
+@workgroup_size(16,16)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     //These are effectively constants
-    let grid_size_x = 8;
-    let grid_size_y = 8;
+    let grid_size_x = 16;
+    let grid_size_y = 16;
     let grid_cell_size_x = width / grid_size_x; 
     let grid_cell_size_y = height / grid_size_y;
 

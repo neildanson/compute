@@ -1,6 +1,8 @@
 struct ScreenCoordinate {
     x: f32,
     y: f32,
+    padding_2: f32,
+    padding_1: f32,
 }
 
 struct Ray {
@@ -75,11 +77,11 @@ fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
 //}
 
 @compute
-@workgroup_size(8, 8)
+@workgroup_size(16, 16)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let num_spheres = 1;
-    let grid_size_x = 8;
-    let grid_size_y = 8;
+    let grid_size_x = 16;
+    let grid_size_y = 16;
     let width = 1920;
     let height = 1080;
     let grid_cell_size_x = width / grid_size_x; 
