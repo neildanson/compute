@@ -144,16 +144,16 @@ async fn run() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {
             let bindings = vec![&screen_coordinates_binding, &width_binding, &height_binding, &generated_rays_binding];
-            ray_generation_shader.execute(&bindings, 16, 16, 1);
+            ray_generation_shader.execute(&bindings, 8, 8, 1);
         
             let bindings = vec![&spheres_binding, &generated_rays_binding, &generated_intersections_binding];
-            ray_intersection_shader.execute(&bindings, 16, 16, 1);
+            ray_intersection_shader.execute(&bindings, 8, 8, 1);
         }
-        let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
-        for i in result.iter() {
-            let ray = i;    
-            println!("ray: {:?}", ray);
-        }
+        //let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
+        //for i in result.iter() {
+        //    let ray = i;    
+        //    println!("ray: {:?}", ray);
+        //}
 
         let result = generated_intersections_binding.buffer.read::<Intersection>(&gpu).unwrap();
 
