@@ -1,14 +1,16 @@
+use std::rc::Rc;
+
 use crate::gpu_compute::Buffer;
 
 pub struct Binding {
-    pub buffer: Buffer, //TODO - hide me
+    pub buffer: Rc<Buffer>, //TODO - hide me
     pub(super) group: u32,
     pub(super) binding: u32,
     pub(super) needs_copy: bool, //TODO - hide me
 }
 
 impl Binding {
-    pub fn new(buffer: Buffer, group: u32, binding: u32) -> Self {
+    pub fn new(buffer: Rc<Buffer>, group: u32, binding: u32) -> Self {
         Self {
             buffer,
             group,
@@ -26,7 +28,7 @@ impl Binding {
 
     pub fn to_new_binding(self, group: u32, binding: u32) -> Self {
         Self {
-            buffer: self.buffer,
+            buffer: Rc::clone(&self.buffer),
             group,
             binding,
             needs_copy: false,

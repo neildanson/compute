@@ -170,6 +170,6 @@ impl Buffer {
     }
 
     pub fn to_binding(self, group: u32, binding: u32) -> Binding {
-        Binding::new(self, group, binding)
+        Binding::new(Rc::new(self), group, binding)
     }
 }
