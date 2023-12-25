@@ -1,6 +1,6 @@
+use bytemuck::{Pod, Zeroable};
 use compute::gpu_compute::{Data, Gpu, Parameters, ReadWrite, Usage};
 use minifb::{Key, Window, WindowOptions};
-use bytemuck::{Pod, Zeroable};
 
 const WIDTH: usize = 640;
 const HEIGHT: usize = 480;
@@ -21,18 +21,21 @@ struct Sphere {
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
-struct Intersection { 
-    ray : Ray, //4
+struct Intersection {
+    ray: Ray, //4
     //distance : f32,
     //sphere : Sphere,
     //is_hit : i32, //5
-    _padding : [i32; 4], //8
+    _padding: [i32; 4], //8
 }
 
 async fn run() {
     let mut spheres = Vec::new();
-    for i in 0 .. 1 {
-        let sphere = Sphere { origin : [0.0, 0.0, 15.0], radius : 1.0 };
+    for i in 0..1 {
+        let sphere = Sphere {
+            origin: [0.0, 0.0, 15.0],
+            radius: 1.0,
+        };
         spheres.push(sphere);
     }
 
@@ -42,26 +45,26 @@ async fn run() {
     let gpu = Gpu::new().await.unwrap();
 
     let width_binding = gpu
-    .create_buffer(
-        Data::Single(WIDTH as i32),
-        Parameters {
-            usage: Usage::Uniform,
-            read_write: ReadWrite::Write,
-        },
-        Some("screen_coordinates"),
-    )
-    .to_binding(0, 1);
+        .create_buffer(
+            Data::Single(WIDTH as i32),
+            Parameters {
+                usage: Usage::Uniform,
+                read_write: ReadWrite::Write,
+            },
+            Some("screen_coordinates"),
+        )
+        .to_binding(0, 1);
 
     let height_binding = gpu
-    .create_buffer(
-        Data::Single(HEIGHT as i32),
-        Parameters {
-            usage: Usage::Uniform,
-            read_write: ReadWrite::Write,
-        },
-        Some("screen_coordinates"),
-    )
-    .to_binding(0, 2);
+        .create_buffer(
+            Data::Single(HEIGHT as i32),
+            Parameters {
+                usage: Usage::Uniform,
+                read_write: ReadWrite::Write,
+            },
+            Some("screen_coordinates"),
+        )
+        .to_binding(0, 2);
 
     let generated_rays_binding = gpu
         .create_readable_buffer::<Ray>(
@@ -75,7 +78,8 @@ async fn run() {
         .to_binding(0, 3);
 
     let spheres_binding = gpu
-        .create_buffer(Data::Slice(&spheres),
+        .create_buffer(
+            Data::Slice(&spheres),
             Parameters {
                 usage: Usage::Storage,
                 read_write: ReadWrite::Write,
@@ -95,7 +99,6 @@ async fn run() {
         )
         .to_binding(0, 1);
 
-
     let mut ray_generation_shader = gpu.create_shader(ray_generation_shader, "main");
     let mut ray_intersection_shader = gpu.create_shader(ray_intersection_shader, "main");
 
@@ -105,7 +108,7 @@ async fn run() {
         "Test - ESC to exit",
         WIDTH,
         HEIGHT,
-        WindowOptions::default() ,
+        WindowOptions::default(),
     )
     .unwrap_or_else(|e| {
         panic!("{}", e);
@@ -117,30 +120,46 @@ async fn run() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {
             let bindings = vec![&width_binding, &height_binding, &generated_rays_binding];
-            ray_generation_shader.execute(&bindings, ((WIDTH * HEIGHT) / 256).try_into().unwrap(), 1, 1);
-        
-            let bindings = vec![&spheres_binding, &generated_rays_binding, &generated_intersections_binding];
-            ray_intersection_shader.execute(&bindings, ((WIDTH * HEIGHT) / 256).try_into().unwrap(), 16, 1);
-        }
-        
-        
+            ray_generation_shader.execute(
+                &bindings,
+                ((WIDTH * HEIGHT) / 256).try_into().unwrap(),
+                1,
+                1,
+            );
 
-        let result = generated_intersections_binding.buffer.read::<Intersection>(&gpu).unwrap();
-        result.iter().take(100).for_each(|i| println!("{:?}", i._padding));
+            let bindings = vec![
+                &spheres_binding,
+                &generated_rays_binding,
+                &generated_intersections_binding,
+            ];
+            ray_intersection_shader.execute(
+                &bindings,
+                ((WIDTH * HEIGHT) / 256).try_into().unwrap(),
+                16,
+                1,
+            );
+        }
+
+        let result = generated_intersections_binding
+            .buffer
+            .read::<Intersection>(&gpu)
+            .unwrap();
+        result
+            .iter()
+            .take(100)
+            .for_each(|i| println!("{:?}", i._padding));
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
-                let intersection = result[idx]; 
+                let intersection = result[idx];
                 if intersection._padding[3] == 1 {
                     *i = 0xFFFFFFFF;
                     continue;
                 }
-            }         
+            }
         }
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-        window
-            .update_with_buffer(&buffer, WIDTH, HEIGHT)
-            .unwrap();
+        window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
     }
 }
 
