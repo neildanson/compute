@@ -2,23 +2,14 @@ use compute::gpu_compute::{Data, Gpu, Parameters, ReadWrite, Usage};
 use minifb::{Key, Window, WindowOptions};
 use bytemuck::{Pod, Zeroable};
 
-const WIDTH: usize = 1920;
-const HEIGHT: usize = 1080;
-
-#[derive(Copy, Clone, Pod, Zeroable, Debug)]
-#[repr(C)]
-pub struct ScreenCoordinate {
-    x: f32,
-    y: f32,
-    _padding: [f32; 2],
-}
+const WIDTH: usize = 640;
+const HEIGHT: usize = 480;
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
 struct Ray {
     origin: [f32; 4],
     direction: [f32; 4],
-    screen_coordinate: ScreenCoordinate,
 }
 
 #[repr(C)]
@@ -31,22 +22,14 @@ struct Sphere {
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
 struct Intersection { 
-    ray : Ray,
+    ray : Ray, //4
     //distance : f32,
     //sphere : Sphere,
-    is_hit : i32,
-    _padding : [i32; 3],
+    //is_hit : i32, //5
+    _padding : [i32; 4], //8
 }
 
 async fn run() {
-    let mut screen_coordinates = Vec::new();
-    for y in 0 .. HEIGHT {
-        for x in 0 .. WIDTH {
-            let coord = ScreenCoordinate { x : x as f32, y : y as f32, _padding : [0.0, 0.0]};
-            screen_coordinates.push(coord);
-        }
-    }
-
     let mut spheres = Vec::new();
     for i in 0 .. 1 {
         let sphere = Sphere { origin : [0.0, 0.0, 15.0], radius : 1.0 };
@@ -57,17 +40,6 @@ async fn run() {
     let ray_intersection_shader = include_str!("ray_intersection.wgsl");
 
     let gpu = Gpu::new().await.unwrap();
-
-    let screen_coordinates_binding = gpu
-    .create_buffer(
-        Data::Slice(&screen_coordinates),
-        Parameters {
-            usage: Usage::Storage,
-            read_write: ReadWrite::Write,
-        },
-        Some("screen_coordinates"),
-    )
-    .to_binding(0, 0);
 
     let width_binding = gpu
     .create_buffer(
@@ -93,7 +65,7 @@ async fn run() {
 
     let generated_rays_binding = gpu
         .create_readable_buffer::<Ray>(
-            screen_coordinates.len(),
+            (WIDTH * HEIGHT).try_into().unwrap(),
             Parameters {
                 usage: Usage::Storage,
                 read_write: ReadWrite::Read,
@@ -114,7 +86,7 @@ async fn run() {
 
     let generated_intersections_binding = gpu
         .create_readable_buffer::<Intersection>(
-            screen_coordinates.len(),
+            (WIDTH * HEIGHT).try_into().unwrap(),
             Parameters {
                 usage: Usage::Storage,
                 read_write: ReadWrite::Read,
@@ -144,29 +116,25 @@ async fn run() {
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {
-            let bindings = vec![&screen_coordinates_binding, &width_binding, &height_binding, &generated_rays_binding];
-            ray_generation_shader.execute(&bindings, 16, 16, 1);
+            let bindings = vec![&width_binding, &height_binding, &generated_rays_binding];
+            ray_generation_shader.execute(&bindings, ((WIDTH * HEIGHT) / 256).try_into().unwrap(), 1, 1);
         
             let bindings = vec![&spheres_binding, &generated_rays_binding, &generated_intersections_binding];
-            ray_intersection_shader.execute(&bindings, 16, 16, 1);
+            ray_intersection_shader.execute(&bindings, ((WIDTH * HEIGHT) / 256).try_into().unwrap(), 16, 1);
         }
         
-        //let result = generated_rays_binding.buffer.read::<Ray>(&gpu).unwrap();
-        //for i in result.iter() {
-        //    let ray = i;    
-        //    println!("ray: {:?}", ray);
-        //}
+        
 
         let result = generated_intersections_binding.buffer.read::<Intersection>(&gpu).unwrap();
-
+        result.iter().take(100).for_each(|i| println!("{:?}", i._padding));
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
-                let intersection = result[idx];
-                if intersection.is_hit == 1 {
+                let intersection = result[idx]; 
+                if intersection._padding[3] == 1 {
                     *i = 0xFFFFFFFF;
                     continue;
                 }
-            }            
+            }         
         }
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
