@@ -34,14 +34,13 @@ async fn run() {
     for i in 0..1 {
         let sphere = Sphere {
             origin: [0.0, 0.0, 15.0],
-            radius: 1.0,
+            radius: 4.0,
         };
         spheres.push(sphere);
     }
 
     let ray_generation_shader = include_str!("ray_generation.wgsl");
     let ray_intersection_shader = include_str!("ray_intersection.wgsl");
-
 
     let gpu = Gpu::new().await.unwrap();
 
@@ -119,10 +118,7 @@ async fn run() {
             .buffer
             .read::<Intersection>(&gpu)
             .unwrap();
-        result
-            .iter()
-            .take(100)
-            .for_each(|i| println!("{:?}", i._padding));
+        
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
                 let intersection = result[idx];
