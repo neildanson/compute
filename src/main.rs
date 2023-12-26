@@ -1,5 +1,5 @@
 use bytemuck::{Pod, Zeroable};
-use compute::gpu_compute::{Data, Gpu, Parameters, ReadWrite, Usage};
+use compute::gpu_compute::{Gpu, Parameters, ReadWrite, Usage};
 use minifb::{Key, Window, WindowOptions};
 
 const WIDTH: usize = 640;
@@ -50,6 +50,7 @@ async fn run() {
 
     let width_binding = ray_generation_shader.create_uniform(WIDTH as i32).to_binding(0, 1);
     let height_binding = ray_generation_shader.create_uniform(HEIGHT as i32).to_binding(0, 2);
+    let spheres_binding = ray_intersection_shader.create_storage_buffer(&spheres).to_binding(0, 0);
 
 
     let generated_rays_binding = gpu
@@ -62,17 +63,6 @@ async fn run() {
             Some("result"),
         )
         .to_binding(0, 3);
-
-    let spheres_binding = gpu
-        .create_buffer(
-            spheres.into(),
-            Parameters {
-                usage: Usage::Storage,
-                read_write: ReadWrite::Write,
-            },
-            Some("spheres"),
-        )
-        .to_binding(0, 0);
 
     let generated_intersections_binding = gpu
         .create_readable_buffer::<Intersection>(

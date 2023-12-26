@@ -1,7 +1,7 @@
 use bytemuck::Pod;
 
-use crate::gpu_compute::{Binding, Buffer, Gpu, Parameters, ReadWrite, Usage};
-use std::{borrow::Cow, collections::HashMap};
+use crate::gpu_compute::{Binding, Buffer, Gpu, Parameters, ReadWrite, Usage, Data};
+use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
 pub struct Shader<'a> {
     gpu : &'a Gpu,
@@ -37,6 +37,16 @@ impl<'a> Shader<'a> {
             Parameters {
                 usage: Usage::Uniform,
                 read_write: ReadWrite::Read,
+            },
+            None
+        )
+    }
+
+    pub fn create_storage_buffer<T : Pod>(&self, data : &[T]) -> Buffer { 
+        self.gpu.create_buffer(Data::Slice(Rc::from(data)), 
+            Parameters {
+                usage: Usage::Storage,
+                read_write: ReadWrite::Write,
             },
             None
         )
