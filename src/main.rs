@@ -45,27 +45,12 @@ async fn run() {
 
     let gpu = Gpu::new().await.unwrap();
 
-    let width_binding = gpu
-        .create_buffer(
-            (WIDTH as i32).into(),
-            Parameters {
-                usage: Usage::Uniform,
-                read_write: ReadWrite::Write,
-            },
-            Some("screen_coordinates"),
-        )
-        .to_binding(0, 1);
+    let mut ray_generation_shader = gpu.create_shader(ray_generation_shader, "main");
+    let mut ray_intersection_shader = gpu.create_shader(ray_intersection_shader, "main");
 
-    let height_binding = gpu
-        .create_buffer(
-            (HEIGHT as i32).into(),
-            Parameters {
-                usage: Usage::Uniform,
-                read_write: ReadWrite::Write,
-            },
-            Some("screen_coordinates"),
-        )
-        .to_binding(0, 2);
+    let width_binding = ray_generation_shader.create_uniform(WIDTH as i32).to_binding(0, 1);
+    let height_binding = ray_generation_shader.create_uniform(HEIGHT as i32).to_binding(0, 2);
+
 
     let generated_rays_binding = gpu
         .create_readable_buffer::<Ray>(
@@ -100,8 +85,6 @@ async fn run() {
         )
         .to_binding(0, 1);
 
-    let mut ray_generation_shader = gpu.create_shader(ray_generation_shader, "main");
-    let mut ray_intersection_shader = gpu.create_shader(ray_intersection_shader, "main");
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 

@@ -3,7 +3,7 @@ use bytemuck::Pod;
 
 pub struct Gpu {
     pub(super) device: wgpu::Device,
-    queue: wgpu::Queue,
+    pub(super) queue: wgpu::Queue,
 }
 
 impl Gpu {
@@ -34,7 +34,7 @@ impl Gpu {
     }
 
     pub fn create_shader(&self, shader_source: &str, entry_point: &str) -> Shader {
-        Shader::new(&self.device, &self.queue, shader_source, entry_point)
+        Shader::new(&self, shader_source, entry_point)
     }
 
     pub fn create_buffer<R: Pod>(

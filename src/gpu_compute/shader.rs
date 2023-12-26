@@ -1,25 +1,25 @@
-use crate::gpu_compute::Binding;
+use bytemuck::Pod;
+
+use crate::gpu_compute::{Binding, Buffer, Gpu, Parameters, ReadWrite, Usage};
 use std::{borrow::Cow, collections::HashMap};
 
 pub struct Shader<'a> {
-    device: &'a wgpu::Device,
-    queue: &'a wgpu::Queue,
+    gpu : &'a Gpu,
     compute_pipeline: wgpu::ComputePipeline,
 }
 
 impl<'a> Shader<'a> {
     pub(super) fn new(
-        device: &'a wgpu::Device,
-        queue: &'a wgpu::Queue,
+        gpu : &'a Gpu,
         src: &str,
         entry_point: &str,
     ) -> Self {
-        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let module = gpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(src)),
         });
 
-        let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+        let compute_pipeline = gpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: None,
             layout: None,
             module: &module,
@@ -27,15 +27,25 @@ impl<'a> Shader<'a> {
         });
 
         Shader {
-            device,
-            queue,
+            gpu,
             compute_pipeline,
         }
+    }
+
+    pub fn create_uniform<T : Pod>(&self, data : T) -> Buffer { 
+        self.gpu.create_buffer(data.into(), 
+            Parameters {
+                usage: Usage::Uniform,
+                read_write: ReadWrite::Read,
+            },
+            None
+        )
     }
 
     pub fn execute(&mut self, bindings: &[&Binding], x: u32, y: u32, z: u32) {
         let mut grouped_bindings: HashMap<_, Vec<&&Binding>> = HashMap::new();
         let mut encoder = self
+            .gpu
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
@@ -65,7 +75,7 @@ impl<'a> Shader<'a> {
 
                 let bind_group_layout = self.compute_pipeline.get_bind_group_layout(*group);
 
-                let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                let bind_group = self.gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: None,
                     layout: &bind_group_layout,
                     entries: &entries,
@@ -88,6 +98,6 @@ impl<'a> Shader<'a> {
         });
 
         // Submits command encoder for processing
-        self.queue.submit(Some(encoder.finish()));
+        self.gpu.queue.submit(Some(encoder.finish()));
     }
 }
