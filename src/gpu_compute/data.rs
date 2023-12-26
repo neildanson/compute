@@ -33,3 +33,12 @@ where
         Data::Slice(Rc::from(data))
     }
 }
+
+impl<T> From<T> for Data<T>
+where
+    T: Pod,
+{
+    fn from(data: T) -> Self {
+        Data::Single(data)
+    }
+}

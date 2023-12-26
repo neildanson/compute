@@ -42,11 +42,12 @@ async fn run() {
     let ray_generation_shader = include_str!("ray_generation.wgsl");
     let ray_intersection_shader = include_str!("ray_intersection.wgsl");
 
+
     let gpu = Gpu::new().await.unwrap();
 
     let width_binding = gpu
         .create_buffer(
-            Data::Single(WIDTH as i32),
+            (WIDTH as i32).into(),
             Parameters {
                 usage: Usage::Uniform,
                 read_write: ReadWrite::Write,
@@ -57,7 +58,7 @@ async fn run() {
 
     let height_binding = gpu
         .create_buffer(
-            Data::Single(HEIGHT as i32),
+            (HEIGHT as i32).into(),
             Parameters {
                 usage: Usage::Uniform,
                 read_write: ReadWrite::Write,
