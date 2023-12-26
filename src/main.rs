@@ -79,7 +79,7 @@ async fn run() {
 
     let spheres_binding = gpu
         .create_buffer(
-            Data::Slice(&spheres),
+            spheres.into(),
             Parameters {
                 usage: Usage::Storage,
                 read_write: ReadWrite::Write,

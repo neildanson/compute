@@ -4,6 +4,7 @@ use bytemuck::Pod;
 use wgpu::util::DeviceExt;
 
 use crate::gpu_compute::Binding;
+use crate::gpu_compute::Data;
 
 use super::Gpu;
 
@@ -33,29 +34,6 @@ impl ReadWrite {
             ReadWrite::Write => wgpu::BufferUsages::COPY_SRC,
             ReadWrite::Read => wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
             ReadWrite::ReadWrite => wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-        }
-    }
-}
-
-pub enum Data<'a, R: Pod> {
-    Slice(&'a [R]),
-    Single(R),
-    Empty(usize),
-}
-
-impl<'a, R: Pod> Data<'a, R> {
-    pub fn size(&self) -> usize {
-        match self {
-            Data::Slice(data) => std::mem::size_of::<R>() * data.len(),
-            Data::Single(_) => std::mem::size_of::<R>(),
-            Data::Empty(size) => *size,
-        }
-    }
-    pub fn bytes(&self) -> Rc<[u8]> {
-        match self {
-            Data::Slice(data) => Rc::from(bytemuck::cast_slice(data)),
-            Data::Single(data) => Rc::from(bytemuck::bytes_of(data)),
-            Data::Empty(size) => Rc::from(bytemuck::cast_slice(&vec![0; *size])),
         }
     }
 }
