@@ -48,6 +48,7 @@ async fn run() {
     let mut ray_generation_shader = gpu.create_shader(ray_generation_shader, "main");
     let mut ray_intersection_shader = gpu.create_shader(ray_intersection_shader, "main");
 
+    //TODO - move this to the gpu, return an Rc ,& make shader create the binding
     let width_binding = ray_generation_shader.create_uniform(WIDTH as i32).to_binding(0, 1);
     let height_binding = ray_generation_shader.create_uniform(HEIGHT as i32).to_binding(0, 2);
     let spheres_binding = ray_intersection_shader.create_storage_buffer(&spheres).to_binding(0, 0);
