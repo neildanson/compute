@@ -1,16 +1,14 @@
-use bytemuck::Pod;
-
-use crate::gpu_compute::{Binding, Buffer, Gpu, Parameters, ReadWrite, Usage, Data};
+use crate::gpu_compute::{Binding, Gpu};
 use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
-pub struct Shader<'a> {
-    gpu : &'a Gpu,
+pub struct Shader {
+    gpu : Rc<Gpu>,
     compute_pipeline: wgpu::ComputePipeline,
 }
 
-impl<'a> Shader<'a> {
+impl Shader {
     pub(super) fn new(
-        gpu : &'a Gpu,
+        gpu : Rc<Gpu>,
         src: &str,
         entry_point: &str,
     ) -> Self {
@@ -32,25 +30,7 @@ impl<'a> Shader<'a> {
         }
     }
 
-    pub fn create_uniform<T : Pod>(&self, data : T) -> Buffer { 
-        self.gpu.create_buffer(data.into(), 
-            Parameters {
-                usage: Usage::Uniform,
-                read_write: ReadWrite::Read,
-            },
-            None
-        )
-    }
-
-    pub fn create_storage_buffer<T : Pod>(&self, data : &[T]) -> Buffer { 
-        self.gpu.create_buffer(Data::Slice(Rc::from(data)), 
-            Parameters {
-                usage: Usage::Storage,
-                read_write: ReadWrite::Write,
-            },
-            None
-        )
-    }
+    
 
     pub fn execute(&mut self, bindings: &[&Binding], x: u32, y: u32, z: u32) {
         let mut grouped_bindings: HashMap<_, Vec<&&Binding>> = HashMap::new();

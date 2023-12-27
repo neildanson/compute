@@ -1,5 +1,6 @@
-use crate::gpu_compute::{Buffer, Data, Parameters, Shader};
+use crate::gpu_compute::{Buffer, Data, Parameters, Shader, ReadWrite, Usage};
 use bytemuck::Pod;
+use std::rc::Rc;
 
 pub struct Gpu {
     pub(super) device: wgpu::Device,
@@ -7,7 +8,7 @@ pub struct Gpu {
 }
 
 impl Gpu {
-    pub async fn new() -> Option<Self> {
+    pub async fn new() -> Option<Rc<Self>> {
         // Instantiates instance of WebGPU
         let instance = wgpu::Instance::default();
 
@@ -30,28 +31,48 @@ impl Gpu {
             .await
             .unwrap();
 
-        Some(Gpu { device, queue })
+        Some(Rc::new(Gpu { device, queue }))
     }
 
-    pub fn create_shader(&self, shader_source: &str, entry_point: &str) -> Shader {
-        Shader::new(&self, shader_source, entry_point)
+    pub fn create_shader(self : &Rc<Self>, shader_source: &str, entry_point: &str) -> Shader {
+        Shader::new(self.clone(), shader_source, entry_point)
+    }
+
+    pub fn create_uniform<T : Pod>(self : &Rc<Self>, data : T) -> Rc<Buffer<T>> { 
+        self.create_buffer(data.into(), 
+            Parameters {
+                usage: Usage::Uniform,
+                read_write: ReadWrite::Read,
+            },
+            None
+        )
+    }
+
+    pub fn create_storage_buffer<T : Pod>(self : &Rc<Self>, data : &[T]) -> Rc<Buffer<T>> { 
+        self.create_buffer(Data::Slice(Rc::from(data)), 
+            Parameters {
+                usage: Usage::Storage,
+                read_write: ReadWrite::Write,
+            },
+            None
+        )
     }
 
     pub fn create_buffer<R: Pod>(
-        &self,
+        self : &Rc<Self>,
         data: Data<R>,
         parameters: Parameters,
         name: Option<&str>,
-    ) -> Buffer {
-        Buffer::new::<R>(&self.device, parameters, data, name)
+    ) -> Rc<Buffer<R>> {
+        Buffer::new(self.clone(), parameters, data, name)
     }
 
     pub fn create_readable_buffer<R: Pod>(
-        &self,
+        self : &Rc<Self>,
         size: usize,
         parameters: Parameters,
         name: Option<&str>,
-    ) -> Buffer {
-        Buffer::new_empty::<R>(&self.device, parameters, size, name)
+    ) -> Rc<Buffer<R>> {
+        Buffer::new_empty(self.clone(), parameters, size, name)
     }
 }

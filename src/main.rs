@@ -31,7 +31,7 @@ struct Intersection {
 
 async fn run() {
     let mut spheres = Vec::new();
-    for i in 0..1 {
+    for _ in 0..1 {
         let sphere = Sphere {
             origin: [0.0, 0.0, 15.0],
             radius: 4.0,
@@ -48,9 +48,9 @@ async fn run() {
     let mut ray_intersection_shader = gpu.create_shader(ray_intersection_shader, "main");
 
     //TODO - move this to the gpu, return an Rc ,& make shader create the binding
-    let width_binding = ray_generation_shader.create_uniform(WIDTH as i32).to_binding(0, 1);
-    let height_binding = ray_generation_shader.create_uniform(HEIGHT as i32).to_binding(0, 2);
-    let spheres_binding = ray_intersection_shader.create_storage_buffer(&spheres).to_binding(0, 0);
+    let width_binding = gpu.create_uniform(WIDTH as i32).to_binding(0, 1);
+    let height_binding = gpu.create_uniform(HEIGHT as i32).to_binding(0, 2);
+    let spheres_binding = gpu.create_storage_buffer(&spheres).to_binding(0, 0);
 
 
     let generated_rays_binding = gpu
@@ -64,16 +64,17 @@ async fn run() {
         )
         .to_binding(0, 3);
 
-    let generated_intersections_binding = gpu
+    let generated_intersections_buffer = gpu
         .create_readable_buffer::<Intersection>(
             (WIDTH * HEIGHT).try_into().unwrap(),
             Parameters {
                 usage: Usage::Storage,
-                read_write: ReadWrite::Read,
+                read_write: ReadWrite::ReadWrite,
             },
             Some("result"),
-        )
-        .to_binding(0, 1);
+        );
+    let generated_intersections_binding = 
+        generated_intersections_buffer.clone().to_binding(0, 1);
 
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
@@ -114,11 +115,10 @@ async fn run() {
             );
         }
 
-        let result = generated_intersections_binding
-            .buffer
-            .read::<Intersection>(&gpu)
+        let result = generated_intersections_buffer
+            .read()
             .unwrap();
-        
+
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
                 let intersection = result[idx];

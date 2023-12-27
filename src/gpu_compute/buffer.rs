@@ -43,26 +43,33 @@ pub struct Parameters {
     pub read_write: ReadWrite,
 }
 
-pub struct Buffer {
-    pub(super) gpu_buffer: wgpu::Buffer,
+pub struct Buffer<T : Pod> {
+    gpu: Rc<Gpu>,
+    pub(super) gpu_buffer: Rc<wgpu::Buffer>,
     ram_buffer: wgpu::Buffer,
     size: wgpu::BufferAddress,
+    _phantom: std::marker::PhantomData<T>,
 }
 
-impl Buffer {
-    pub fn new<T: Pod>(
-        device: &wgpu::Device,
+pub(crate) trait BindableBuffer {
+    fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder);
+    fn as_binding_resource(&self) -> wgpu::BindingResource;
+}
+
+impl<T : Pod> Buffer<T> {
+    pub fn new(
+        gpu: Rc<Gpu>,
         parameters: Parameters,
         data: Data<T>,
         name: Option<&str>,
-    ) -> Self
+    ) -> Rc<Buffer<T>>
     where
         T: bytemuck::Pod,
     {
         let size = data.size();
         let size = size as wgpu::BufferAddress;
 
-        let ram_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
             size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
@@ -71,51 +78,55 @@ impl Buffer {
 
         let bytes = data.bytes();
 
-        let gpu_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let gpu_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Storage Buffer"),
             contents: bytes.as_ref(),
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
         });
-
-        Buffer {
+        let gpu_buffer = Rc::from(gpu_buffer);
+        Rc::new(Buffer {
+            gpu,
             gpu_buffer,
             ram_buffer,
             size,
-        }
+            _phantom: std::marker::PhantomData,
+        })
     }
 
-    pub fn new_empty<R>(
-        device: &wgpu::Device,
+    pub fn new_empty(
+        gpu: Rc<Gpu>,
         parameters: Parameters,
         size: usize,
         name: Option<&str>,
-    ) -> Self
-    where
-        R: bytemuck::Pod,
+    ) -> Rc<Buffer<T>>
     {
-        let size = size * std::mem::size_of::<R>();
-        let ram_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let size = size * std::mem::size_of::<T>();
+        let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
             size: size as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        let gpu_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let gpu_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name, //Name of buffer
             size: size as wgpu::BufferAddress,
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
             mapped_at_creation: false,
         });
+        
+        let gpu_buffer = Rc::from(gpu_buffer);
 
-        Buffer {
+        Rc::new(Buffer {
+            gpu,
             gpu_buffer,
             ram_buffer,
             size: size as wgpu::BufferAddress,
-        }
+            _phantom: std::marker::PhantomData,
+        })
     }
 
-    pub fn read<R: Pod>(&self, gpu: &Gpu) -> Option<Vec<R>> {
+    pub fn read(&self) -> Option<Vec<T>> {
         let buffer_slice = self.ram_buffer.slice(..);
         // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
         let (sender, receiver) = channel();
@@ -124,7 +135,7 @@ impl Buffer {
         // Poll the device in a blocking manner so that our future resolves.
         // In an actual application, `device.poll(...)` should
         // be called in an event loop or on another thread.
-        gpu.device.poll(wgpu::Maintain::Wait);
+        self.gpu.device.poll(wgpu::Maintain::Wait);
 
         // Awaits until `buffer_future` can be read from
         if let Ok(Ok(())) = receiver.recv() {
@@ -143,11 +154,18 @@ impl Buffer {
         }
     }
 
-    pub(super) fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
+    pub fn to_binding(self : Rc<Self>, group: u32, binding: u32) -> Binding {
+        Binding::new(self, group, binding)
+    }
+}
+
+
+impl<T : Pod> BindableBuffer for Buffer<T> {
+    fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
         encoder.copy_buffer_to_buffer(&self.gpu_buffer, 0, &self.ram_buffer, 0, self.size);
     }
 
-    pub fn to_binding(self, group: u32, binding: u32) -> Binding {
-        Binding::new(Rc::new(self), group, binding)
+    fn as_binding_resource(&self) -> wgpu::BindingResource {
+        self.gpu_buffer.as_entire_binding()
     }
 }
