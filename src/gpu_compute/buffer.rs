@@ -45,8 +45,8 @@ pub struct Parameters {
 
 pub struct Buffer<T : Pod> {
     gpu: Rc<Gpu>,
-    gpu_buffer: Rc<wgpu::Buffer>,
-    ram_buffer: wgpu::Buffer,
+    gpu_buffer: wgpu::Buffer,
+    ram_buffer: Rc<wgpu::Buffer>,
     size: wgpu::BufferAddress,
     _phantom: std::marker::PhantomData<T>,
 }
@@ -69,7 +69,7 @@ impl<T : Pod> Buffer<T> {
         let size = data.size();
         let size = size as wgpu::BufferAddress;
 
-        let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
+        let gpu_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
             size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
@@ -78,16 +78,16 @@ impl<T : Pod> Buffer<T> {
 
         let bytes = data.bytes();
 
-        let gpu_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let ram_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Storage Buffer"),
             contents: bytes.as_ref(),
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
         });
-        let gpu_buffer = Rc::from(gpu_buffer);
+        let ram_buffer = Rc::from(ram_buffer);
         Rc::new(Buffer {
             gpu,
-            gpu_buffer,
             ram_buffer,
+            gpu_buffer,
             size,
             _phantom: std::marker::PhantomData,
         })
@@ -101,33 +101,33 @@ impl<T : Pod> Buffer<T> {
     ) -> Rc<Buffer<T>>
     {
         let size = size * std::mem::size_of::<T>();
-        let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
+        let gpu_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
             size: size as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        let gpu_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
+        let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name, //Name of buffer
             size: size as wgpu::BufferAddress,
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
             mapped_at_creation: false,
         });
         
-        let gpu_buffer = Rc::from(gpu_buffer);
+        let ram_buffer = Rc::from(ram_buffer);
 
         Rc::new(Buffer {
             gpu,
-            gpu_buffer,
             ram_buffer,
+            gpu_buffer,
             size: size as wgpu::BufferAddress,
             _phantom: std::marker::PhantomData,
         })
     }
 
     pub fn read(&self) -> Option<Vec<T>> {
-        let buffer_slice = self.ram_buffer.slice(..);
+        let buffer_slice = self.gpu_buffer.slice(..);
         // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
         let (sender, receiver) = channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
@@ -135,6 +135,7 @@ impl<T : Pod> Buffer<T> {
         // Poll the device in a blocking manner so that our future resolves.
         // In an actual application, `device.poll(...)` should
         // be called in an event loop or on another thread.
+
         self.gpu.device.poll(wgpu::Maintain::Wait);
 
         // Awaits until `buffer_future` can be read from
@@ -146,7 +147,7 @@ impl<T : Pod> Buffer<T> {
             // With the current interface, we have to make sure all mapped views are
             // dropped before we unmap the buffer.
             drop(data);
-            self.ram_buffer.unmap(); // Unmaps buffer from memory
+            self.gpu_buffer.unmap(); // Unmaps buffer from memory
 
             Some(result)
         } else {
@@ -162,10 +163,10 @@ impl<T : Pod> Buffer<T> {
 
 impl<T : Pod> BindableBuffer for Buffer<T> {
     fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
-        encoder.copy_buffer_to_buffer(&self.gpu_buffer, 0, &self.ram_buffer, 0, self.size);
+        encoder.copy_buffer_to_buffer(&self.ram_buffer, 0, &self.gpu_buffer, 0, self.size);
     }
 
     fn as_binding_resource(&self) -> wgpu::BindingResource {
-        self.gpu_buffer.as_entire_binding()
+        self.ram_buffer.as_entire_binding()
     }
 }
