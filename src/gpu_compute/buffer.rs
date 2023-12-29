@@ -126,7 +126,7 @@ impl<T : Pod> Buffer<T> {
         })
     }
 
-    pub fn read(&self) -> Option<Vec<T>> {
+    pub async fn read(&self) -> Option<Vec<T>> {
         let buffer_slice = self.gpu_buffer.slice(..);
         // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
         let (sender, receiver) = channel();

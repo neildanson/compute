@@ -117,6 +117,7 @@ async fn run() {
 
         let result = generated_intersections_buffer
             .read()
+            .await
             .unwrap();
 
         for (idx, i) in buffer.iter_mut().enumerate() {
