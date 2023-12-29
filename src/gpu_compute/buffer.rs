@@ -45,7 +45,7 @@ pub struct Parameters {
 
 pub struct Buffer<T : Pod> {
     gpu: Rc<Gpu>,
-    pub(super) gpu_buffer: Rc<wgpu::Buffer>,
+    gpu_buffer: Rc<wgpu::Buffer>,
     ram_buffer: wgpu::Buffer,
     size: wgpu::BufferAddress,
     _phantom: std::marker::PhantomData<T>,

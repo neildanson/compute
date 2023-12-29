@@ -29,7 +29,6 @@ impl Shader {
             compute_pipeline,
         }
     }
-
     
 
     pub fn execute(&mut self, bindings: &[&Binding], x: u32, y: u32, z: u32) {

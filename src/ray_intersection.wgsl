@@ -83,10 +83,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let y = array_pos / width;
         for (var j = 0; j < num_spheres; j++) {
             let sphere = spheres[j];
-            let intersection = intersects(sphere, input[array_pos], i, y);
-            //if (intersection.is_hit == 1) {
-                result[array_pos] = intersection;
-            //}
+            result[array_pos] = intersects(sphere, input[array_pos], i, y);
         }
     }    
 }
