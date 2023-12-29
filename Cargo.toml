@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 wgpu = "0.18.0"
-pollster = "0.3.0"
 env_logger = "0.10.0"
 bytemuck = { version = "1.13.1", features = ["derive"] }
 minifb = "0.25.0"
+tokio = { version = "1", features = ["full"] }

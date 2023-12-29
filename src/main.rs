@@ -134,7 +134,9 @@ async fn run() {
     }
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
+    // Open a connection to the
     env_logger::init();
-    pollster::block_on(run());
+    run().await;
 }
