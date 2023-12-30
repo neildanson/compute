@@ -3,6 +3,7 @@ use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
 pub struct Shader {
     gpu: Rc<Gpu>,
+    bindings: HashMap<String, Binding>,
     compute_pipeline: wgpu::ComputePipeline,
 }
 
@@ -23,22 +24,27 @@ impl Shader {
                     module: &module,
                     entry_point,
                 });
-
+        let bindings = HashMap::new();
         Shader {
             gpu,
             compute_pipeline,
+            bindings,
         }
     }
 
-    pub fn execute(&mut self, bindings: &[&Binding], x: u32, y: u32, z: u32) {
-        let mut grouped_bindings: HashMap<_, Vec<&&Binding>> = HashMap::new();
+    pub fn create_binding(&mut self, name: &str, binding: Binding) {
+        self.bindings.insert(name.to_string(), binding);
+    }
+
+    pub fn execute(&mut self, x: u32, y: u32, z: u32) {
+        let mut grouped_bindings: HashMap<_, Vec<&Binding>> = HashMap::new();
         let mut encoder = self
             .gpu
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         {
             let mut bind_groups = Vec::new();
-            for binding in bindings.into_iter() {
+            for binding in self.bindings.values() {
                 match grouped_bindings.get_mut(&binding.group) {
                     Some(grouped_binding) => {
                         grouped_binding.push(binding);
@@ -82,7 +88,7 @@ impl Shader {
             cpass.dispatch_workgroups(x, y, z);
         }
 
-        bindings.iter().for_each(|binding| {
+        self.bindings.values().for_each(|binding| {
             binding.buffer.copy_to_buffer(&mut encoder)
         });
 

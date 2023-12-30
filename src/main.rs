@@ -54,8 +54,13 @@ async fn run() {
         .create_storage_buffer_with_data(&spheres)
         .to_binding(0, 0);
 
-    let generated_rays_binding = gpu
-        .create_storage_buffer::<Ray>((WIDTH * HEIGHT).try_into().unwrap())
+    
+    let generated_rays_buffer = gpu
+        .create_storage_buffer::<Ray>((WIDTH * HEIGHT).try_into().unwrap());
+
+    let generated_rays_binding = generated_rays_buffer.clone()
+        .to_binding(0, 3);
+    let generated_rays_binding2 = generated_rays_buffer
         .to_binding(0, 3);
 
     let generated_intersections_buffer =
@@ -76,26 +81,30 @@ async fn run() {
 
     // Limit to max ~60 fps update rate
     //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
+    ray_generation_shader.create_binding("width", width_binding);
+    ray_generation_shader.create_binding("height", height_binding);
+    ray_generation_shader.create_binding("generated_rays", generated_rays_binding);
 
+    ray_intersection_shader.create_binding("spheres", spheres_binding);
+    ray_intersection_shader.create_binding(
+        "generated_rays",
+        generated_rays_binding2,
+    );
+    ray_intersection_shader.create_binding(
+        "generated_intersections",
+        generated_intersections_binding,
+    );
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {
-            let bindings = vec![&width_binding, &height_binding, &generated_rays_binding];
             ray_generation_shader.execute(
-                &bindings,
                 ((WIDTH * HEIGHT) / 256).try_into().unwrap(),
                 1,
                 1,
             );
 
-            let bindings = vec![
-                &spheres_binding,
-                &generated_rays_binding,
-                &generated_intersections_binding,
-            ];
             ray_intersection_shader.execute(
-                &bindings,
                 ((WIDTH * HEIGHT) / 256).try_into().unwrap(),
-                16,
+                1,
                 1,
             );
         }
