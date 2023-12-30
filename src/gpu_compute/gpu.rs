@@ -1,4 +1,4 @@
-use crate::gpu_compute::{Buffer, Data, Parameters, ReadWrite, Shader, Usage};
+use crate::gpu_compute::{Buffer, Data, Parameters, ReadWrite, Shader};
 use bytemuck::Pod;
 use std::rc::Rc;
 
@@ -42,10 +42,10 @@ impl Gpu {
         self.create_buffer(
             data.into(),
             Parameters {
-                usage: Usage::Uniform,
                 read_write: ReadWrite::Write,
             },
             None,
+            wgpu::BufferUsages::UNIFORM,
         )
     }
 
@@ -53,10 +53,10 @@ impl Gpu {
         self.create_buffer(
             Data::Slice(Rc::from(data)),
             Parameters {
-                usage: Usage::Storage,
                 read_write: ReadWrite::Write,
             },
             None,
+            wgpu::BufferUsages::STORAGE,
         )
     }
 
@@ -64,11 +64,11 @@ impl Gpu {
         Buffer::new_empty(
             self.clone(),
             Parameters {
-                usage: Usage::Storage,
                 read_write: ReadWrite::ReadWrite,
             },
             Data::Empty(size),
             None,
+            wgpu::BufferUsages::STORAGE,
         )
     }
 
@@ -77,7 +77,8 @@ impl Gpu {
         data: Data<R>,
         parameters: Parameters,
         name: Option<&str>,
+        buffer_usages: wgpu::BufferUsages,
     ) -> Rc<Buffer<R>> {
-        Buffer::new(self.clone(), parameters, data, name)
+        Buffer::new(self.clone(), parameters, data, name, buffer_usages)
     }
 }

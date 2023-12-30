@@ -1,5 +1,5 @@
 use bytemuck::{Pod, Zeroable};
-use compute::gpu_compute::{Gpu, Parameters, ReadWrite, Usage};
+use compute::gpu_compute::Gpu;
 use minifb::{Key, Window, WindowOptions};
 
 const WIDTH: usize = 640;

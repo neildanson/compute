@@ -8,20 +8,6 @@ use crate::gpu_compute::Data;
 
 use super::Gpu;
 
-pub enum Usage {
-    Storage,
-    Uniform,
-}
-
-impl Usage {
-    fn to_wgpu_usage(&self) -> wgpu::BufferUsages {
-        match self {
-            Usage::Storage => wgpu::BufferUsages::STORAGE,
-            Usage::Uniform => wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::STORAGE,
-        }
-    }
-}
-
 pub enum ReadWrite {
     Read,
     Write,
@@ -39,7 +25,6 @@ impl ReadWrite {
 }
 
 pub struct Parameters {
-    pub usage: Usage,
     pub read_write: ReadWrite,
 }
 
@@ -62,6 +47,7 @@ impl<T: Pod> Buffer<T> {
         parameters: Parameters,
         data: Data<T>,
         name: Option<&str>,
+        buffer_usages: wgpu::BufferUsages,
     ) -> Rc<Buffer<T>>
     where
         T: bytemuck::Pod,
@@ -83,7 +69,7 @@ impl<T: Pod> Buffer<T> {
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Storage Buffer"),
                 contents: bytes.as_ref(),
-                usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
+                usage: parameters.read_write.to_wgpu_usage() | buffer_usages,
             });
         let ram_buffer = Rc::from(ram_buffer);
         Rc::new(Buffer {
@@ -100,6 +86,7 @@ impl<T: Pod> Buffer<T> {
         parameters: Parameters,
         data: Data<T>,
         name: Option<&str>,
+        buffer_usages: wgpu::BufferUsages,
     ) -> Rc<Buffer<T>> {
         let size = data.size();
         let size = size as wgpu::BufferAddress;
@@ -113,7 +100,7 @@ impl<T: Pod> Buffer<T> {
         let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name, //Name of buffer
             size: size,
-            usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
+            usage: parameters.read_write.to_wgpu_usage() | buffer_usages,
             mapped_at_creation: false,
         });
 
