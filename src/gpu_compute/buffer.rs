@@ -42,7 +42,7 @@ pub(crate) trait BindableBuffer {
 }
 
 impl<T: Pod> Buffer<T> {
-    pub fn new(
+    pub(crate)  fn new(
         gpu: Rc<Gpu>,
         parameters: Parameters,
         data: Data<T>,
@@ -81,7 +81,7 @@ impl<T: Pod> Buffer<T> {
         })
     }
 
-    pub fn new_empty(
+    pub(crate)  fn new_empty(
         gpu: Rc<Gpu>,
         parameters: Parameters,
         data: Data<T>,
