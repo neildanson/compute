@@ -43,7 +43,7 @@ pub struct Parameters {
     pub read_write: ReadWrite,
 }
 
-pub struct Buffer<T : Pod> {
+pub struct Buffer<T: Pod> {
     gpu: Rc<Gpu>,
     gpu_buffer: wgpu::Buffer,
     ram_buffer: Rc<wgpu::Buffer>,
@@ -56,7 +56,7 @@ pub(crate) trait BindableBuffer {
     fn as_binding_resource(&self) -> wgpu::BindingResource;
 }
 
-impl<T : Pod> Buffer<T> {
+impl<T: Pod> Buffer<T> {
     pub fn new(
         gpu: Rc<Gpu>,
         parameters: Parameters,
@@ -78,11 +78,13 @@ impl<T : Pod> Buffer<T> {
 
         let bytes = data.bytes();
 
-        let ram_buffer = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Storage Buffer"),
-            contents: bytes.as_ref(),
-            usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
-        });
+        let ram_buffer = gpu
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Storage Buffer"),
+                contents: bytes.as_ref(),
+                usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
+            });
         let ram_buffer = Rc::from(ram_buffer);
         Rc::new(Buffer {
             gpu,
@@ -96,32 +98,32 @@ impl<T : Pod> Buffer<T> {
     pub fn new_empty(
         gpu: Rc<Gpu>,
         parameters: Parameters,
-        size: usize,
+        data: Data<T>,
         name: Option<&str>,
-    ) -> Rc<Buffer<T>>
-    {
-        let size = size * std::mem::size_of::<T>();
+    ) -> Rc<Buffer<T>> {
+        let size = data.size();
+        let size = size as wgpu::BufferAddress;
         let gpu_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name,
-            size: size as wgpu::BufferAddress,
+            size: size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
         let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: name, //Name of buffer
-            size: size as wgpu::BufferAddress,
+            size: size,
             usage: parameters.read_write.to_wgpu_usage() | parameters.usage.to_wgpu_usage(),
             mapped_at_creation: false,
         });
-        
+
         let ram_buffer = Rc::from(ram_buffer);
 
         Rc::new(Buffer {
             gpu,
             ram_buffer,
             gpu_buffer,
-            size: size as wgpu::BufferAddress,
+            size: size,
             _phantom: std::marker::PhantomData,
         })
     }
@@ -155,13 +157,12 @@ impl<T : Pod> Buffer<T> {
         }
     }
 
-    pub fn to_binding(self : Rc<Self>, group: u32, binding: u32) -> Binding {
+    pub fn to_binding(self: Rc<Self>, group: u32, binding: u32) -> Binding {
         Binding::new(self, group, binding)
     }
 }
 
-
-impl<T : Pod> BindableBuffer for Buffer<T> {
+impl<T: Pod> BindableBuffer for Buffer<T> {
     fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
         encoder.copy_buffer_to_buffer(&self.ram_buffer, 0, &self.gpu_buffer, 0, self.size);
     }

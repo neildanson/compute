@@ -1,4 +1,4 @@
-use crate::gpu_compute::{Buffer, Data, Parameters, Shader, ReadWrite, Usage};
+use crate::gpu_compute::{Buffer, Data, Parameters, ReadWrite, Shader, Usage};
 use bytemuck::Pod;
 use std::rc::Rc;
 
@@ -34,45 +34,50 @@ impl Gpu {
         Some(Rc::new(Gpu { device, queue }))
     }
 
-    pub fn create_shader(self : &Rc<Self>, shader_source: &str, entry_point: &str) -> Shader {
+    pub fn create_shader(self: &Rc<Self>, shader_source: &str, entry_point: &str) -> Shader {
         Shader::new(self.clone(), shader_source, entry_point)
     }
 
-    pub fn create_uniform<T : Pod>(self : &Rc<Self>, data : T) -> Rc<Buffer<T>> { 
-        self.create_buffer(data.into(), 
+    pub fn create_uniform<T: Pod>(self: &Rc<Self>, data: T) -> Rc<Buffer<T>> {
+        self.create_buffer(
+            data.into(),
             Parameters {
                 usage: Usage::Uniform,
-                read_write: ReadWrite::Read,
+                read_write: ReadWrite::Write,
             },
-            None
+            None,
         )
     }
 
-    pub fn create_storage_buffer<T : Pod>(self : &Rc<Self>, data : &[T]) -> Rc<Buffer<T>> { 
-        self.create_buffer(Data::Slice(Rc::from(data)), 
+    pub fn create_storage_buffer_with_data<T: Pod>(self: &Rc<Self>, data: &[T]) -> Rc<Buffer<T>> {
+        self.create_buffer(
+            Data::Slice(Rc::from(data)),
             Parameters {
                 usage: Usage::Storage,
                 read_write: ReadWrite::Write,
             },
-            None
+            None,
         )
     }
 
-    pub fn create_buffer<R: Pod>(
-        self : &Rc<Self>,
+    pub fn create_storage_buffer<T: Pod>(self: &Rc<Self>, size: usize) -> Rc<Buffer<T>> {
+        Buffer::new_empty(
+            self.clone(),
+            Parameters {
+                usage: Usage::Storage,
+                read_write: ReadWrite::ReadWrite,
+            },
+            Data::Empty(size),
+            None,
+        )
+    }
+
+    fn create_buffer<R: Pod>(
+        self: &Rc<Self>,
         data: Data<R>,
         parameters: Parameters,
         name: Option<&str>,
     ) -> Rc<Buffer<R>> {
         Buffer::new(self.clone(), parameters, data, name)
-    }
-
-    pub fn create_readable_buffer<R: Pod>(
-        self : &Rc<Self>,
-        size: usize,
-        parameters: Parameters,
-        name: Option<&str>,
-    ) -> Rc<Buffer<R>> {
-        Buffer::new_empty(self.clone(), parameters, size, name)
     }
 }

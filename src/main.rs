@@ -50,32 +50,17 @@ async fn run() {
     //TODO - move this to the gpu, return an Rc ,& make shader create the binding
     let width_binding = gpu.create_uniform(WIDTH as i32).to_binding(0, 1);
     let height_binding = gpu.create_uniform(HEIGHT as i32).to_binding(0, 2);
-    let spheres_binding = gpu.create_storage_buffer(&spheres).to_binding(0, 0);
-
+    let spheres_binding = gpu
+        .create_storage_buffer_with_data(&spheres)
+        .to_binding(0, 0);
 
     let generated_rays_binding = gpu
-        .create_readable_buffer::<Ray>(
-            (WIDTH * HEIGHT).try_into().unwrap(),
-            Parameters {
-                usage: Usage::Storage,
-                read_write: ReadWrite::Read,
-            },
-            Some("result"),
-        )
+        .create_storage_buffer::<Ray>((WIDTH * HEIGHT).try_into().unwrap())
         .to_binding(0, 3);
 
-    let generated_intersections_buffer = gpu
-        .create_readable_buffer::<Intersection>(
-            (WIDTH * HEIGHT).try_into().unwrap(),
-            Parameters {
-                usage: Usage::Storage,
-                read_write: ReadWrite::ReadWrite,
-            },
-            Some("result"),
-        );
-    let generated_intersections_binding = 
-        generated_intersections_buffer.clone().to_binding(0, 1);
-
+    let generated_intersections_buffer =
+        gpu.create_storage_buffer::<Intersection>((WIDTH * HEIGHT).try_into().unwrap());
+    let generated_intersections_binding = generated_intersections_buffer.clone().to_binding(0, 1);
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
@@ -115,10 +100,7 @@ async fn run() {
             );
         }
 
-        let result = generated_intersections_buffer
-            .read()
-            .await
-            .unwrap();
+        let result = generated_intersections_buffer.read().await.unwrap();
 
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {

@@ -2,34 +2,33 @@ use crate::gpu_compute::{Binding, Gpu};
 use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
 pub struct Shader {
-    gpu : Rc<Gpu>,
+    gpu: Rc<Gpu>,
     compute_pipeline: wgpu::ComputePipeline,
 }
 
 impl Shader {
-    pub(super) fn new(
-        gpu : Rc<Gpu>,
-        src: &str,
-        entry_point: &str,
-    ) -> Self {
-        let module = gpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: None,
-            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(src)),
-        });
+    pub(super) fn new(gpu: Rc<Gpu>, src: &str, entry_point: &str) -> Self {
+        let module = gpu
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: None,
+                source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(src)),
+            });
 
-        let compute_pipeline = gpu.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: None,
-            layout: None,
-            module: &module,
-            entry_point,
-        });
+        let compute_pipeline =
+            gpu.device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: None,
+                    layout: None,
+                    module: &module,
+                    entry_point,
+                });
 
         Shader {
             gpu,
             compute_pipeline,
         }
     }
-    
 
     pub fn execute(&mut self, bindings: &[&Binding], x: u32, y: u32, z: u32) {
         let mut grouped_bindings: HashMap<_, Vec<&&Binding>> = HashMap::new();
@@ -64,11 +63,14 @@ impl Shader {
 
                 let bind_group_layout = self.compute_pipeline.get_bind_group_layout(*group);
 
-                let bind_group = self.gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: None,
-                    layout: &bind_group_layout,
-                    entries: &entries,
-                });
+                let bind_group = self
+                    .gpu
+                    .device
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: None,
+                        layout: &bind_group_layout,
+                        entries: &entries,
+                    });
 
                 bind_groups.push((group, bind_group));
             }
@@ -81,9 +83,7 @@ impl Shader {
         }
 
         bindings.iter().for_each(|binding| {
-            if binding.needs_copy {
-                binding.buffer.copy_to_buffer(&mut encoder)
-            }
+            binding.buffer.copy_to_buffer(&mut encoder)
         });
 
         // Submits command encoder for processing

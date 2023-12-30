@@ -13,7 +13,7 @@ impl<R: Pod> Data<R> {
         match self {
             Data::Slice(data) => std::mem::size_of::<R>() * data.len(),
             Data::Single(_) => std::mem::size_of::<R>(),
-            Data::Empty(size) => *size,
+            Data::Empty(size) => std::mem::size_of::<R>() * size,
         }
     }
     pub fn bytes(&self) -> Rc<[u8]> {

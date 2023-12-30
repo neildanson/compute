@@ -6,7 +6,6 @@ pub struct Binding {
     pub(super) buffer: Rc<dyn BindableBuffer>, //TODO - hide me
     pub(super) group: u32,
     pub(super) binding: u32,
-    pub(super) needs_copy: bool, //TODO - hide me
 }
 
 impl Binding {
@@ -15,7 +14,6 @@ impl Binding {
             buffer,
             group,
             binding,
-            needs_copy: true,
         }
     }
 
