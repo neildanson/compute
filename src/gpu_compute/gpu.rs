@@ -61,12 +61,11 @@ impl Gpu {
     }
 
     pub fn create_storage_buffer<T: Pod>(self: &Rc<Self>, size: usize) -> Rc<Buffer<T>> {
-        Buffer::new_empty(
-            self.clone(),
+        self.create_buffer(
+            Data::Empty(size),
             Parameters {
                 read_write: ReadWrite::ReadWrite,
             },
-            Data::Empty(size),
             None,
             wgpu::BufferUsages::STORAGE,
         )

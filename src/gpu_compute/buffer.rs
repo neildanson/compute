@@ -64,13 +64,27 @@ impl<T: Pod> Buffer<T> {
 
         let bytes = data.bytes();
 
-        let ram_buffer = gpu
+        let ram_buffer = 
+        match data {
+            Data::Single(_) | Data::Slice(_) => {
+                gpu
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Storage Buffer"),
                 contents: bytes.as_ref(),
                 usage: parameters.read_write.to_wgpu_usage() | buffer_usages,
-            });
+            })
+            },
+            _ => {
+                gpu.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: name, //Name of buffer
+                    size: size,
+                    usage: parameters.read_write.to_wgpu_usage() | buffer_usages,
+                    mapped_at_creation: false,
+                })
+            }
+        };
+        
         let ram_buffer = Rc::from(ram_buffer);
         Rc::new(Buffer {
             gpu,
@@ -79,40 +93,7 @@ impl<T: Pod> Buffer<T> {
             size,
             _phantom: std::marker::PhantomData,
         })
-    }
 
-    pub(crate)  fn new_empty(
-        gpu: Rc<Gpu>,
-        parameters: Parameters,
-        data: Data<T>,
-        name: Option<&str>,
-        buffer_usages: wgpu::BufferUsages,
-    ) -> Rc<Buffer<T>> {
-        let size = data.size();
-        let size = size as wgpu::BufferAddress;
-        let gpu_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: name,
-            size: size,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let ram_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: name, //Name of buffer
-            size: size,
-            usage: parameters.read_write.to_wgpu_usage() | buffer_usages,
-            mapped_at_creation: false,
-        });
-
-        let ram_buffer = Rc::from(ram_buffer);
-
-        Rc::new(Buffer {
-            gpu,
-            ram_buffer,
-            gpu_buffer,
-            size: size,
-            _phantom: std::marker::PhantomData,
-        })
     }
 
     pub async fn read(&self) -> Option<Vec<T>> {
