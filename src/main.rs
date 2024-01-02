@@ -30,6 +30,8 @@ struct Intersection {
 }
 
 async fn run() {
+    
+    let num_threads : u32 = ((WIDTH * HEIGHT) / 256).try_into().unwrap();
     let mut spheres = Vec::new();
     for _ in 0..1 {
         let sphere = Sphere {
@@ -56,7 +58,7 @@ async fn run() {
 
     
     let generated_rays_buffer = gpu
-        .create_storage_buffer::<Ray>((WIDTH * HEIGHT).try_into().unwrap());
+        .create_storage_buffer::<Ray>(WIDTH * HEIGHT);
 
     let generated_rays_binding = generated_rays_buffer.clone()
         .to_binding(0, 3);
@@ -64,7 +66,7 @@ async fn run() {
         .to_binding(0, 3);
 
     let generated_intersections_buffer =
-        gpu.create_storage_buffer::<Intersection>((WIDTH * HEIGHT).try_into().unwrap());
+        gpu.create_storage_buffer::<Intersection>(WIDTH * HEIGHT);
     let generated_intersections_binding = generated_intersections_buffer.clone().to_binding(0, 1);
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
@@ -80,7 +82,7 @@ async fn run() {
     });
 
     // Limit to max ~60 fps update rate
-    //window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
+    window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
     ray_generation_shader.create_binding("width", width_binding);
     ray_generation_shader.create_binding("height", height_binding);
     ray_generation_shader.create_binding("generated_rays", generated_rays_binding);
@@ -94,16 +96,18 @@ async fn run() {
         "generated_intersections",
         generated_intersections_binding,
     );
+
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {
             ray_generation_shader.execute(
-                ((WIDTH * HEIGHT) / 256).try_into().unwrap(),
+                num_threads,
                 1,
                 1,
             );
 
             ray_intersection_shader.execute(
-                ((WIDTH * HEIGHT) / 256).try_into().unwrap(),
+                num_threads,
                 1,
                 1,
             );
