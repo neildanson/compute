@@ -16,21 +16,17 @@ struct Intersection {
     padding : vec4<i32>, //12
 }
 
-
-
-
-
 @group(0)
 @binding(0)
-var<storage, read> spheres: array<Sphere>; 
+var<storage, read> input: array<Ray>; 
 
 @group(0)
 @binding(1)
-var<storage, read_write> result: array<Intersection>; 
+var<storage, read> spheres: array<Sphere>; 
 
 @group(0)
-@binding(3)
-var<storage, read> input: array<Ray>; 
+@binding(2)
+var<storage, read_write> result: array<Intersection>; 
 
 fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
     let diff = sphere.position.xyz - ray.origin.xyz;

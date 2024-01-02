@@ -54,7 +54,7 @@ async fn run() {
     let height_binding = gpu.create_uniform(HEIGHT as i32).to_binding(0, 2);
     let spheres_binding = gpu
         .create_storage_buffer_with_data(&spheres)
-        .to_binding(0, 0);
+        .to_binding(0, 1);
 
     
     let generated_rays_buffer = gpu
@@ -62,12 +62,13 @@ async fn run() {
 
     let generated_rays_binding = generated_rays_buffer.clone()
         .to_binding(0, 3);
+
     let generated_rays_binding2 = generated_rays_buffer
-        .to_binding(0, 3);
+        .to_binding(0, 0);
 
     let generated_intersections_buffer =
         gpu.create_storage_buffer::<Intersection>(WIDTH * HEIGHT);
-    let generated_intersections_binding = generated_intersections_buffer.clone().to_binding(0, 1);
+    let generated_intersections_binding = generated_intersections_buffer.clone().to_binding(0, 2);
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
