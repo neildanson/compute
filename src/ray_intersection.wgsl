@@ -69,7 +69,7 @@ fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
 
 @compute
 @workgroup_size(256, 1)
-fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>,  @builtin(local_invocation_id) local_invocation_id : vec3<u32>,) {
+fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>, ) {
     let num_spheres = 1;
     let width = 640;
     let array_pos = i32(global_invocation_id.x);

@@ -17,7 +17,7 @@ impl Binding {
         }
     }
 
-    pub(super) fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
+    pub(crate) fn to_bind_group_entry(&self) -> wgpu::BindGroupEntry {
         wgpu::BindGroupEntry {
             binding: self.binding,
             resource: self.buffer.as_binding_resource(),
