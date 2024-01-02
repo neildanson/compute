@@ -48,12 +48,11 @@ fn get_ray(x : f32, y : f32, half_width : f32, half_height :f32, camera : Camera
 
 @compute
 @workgroup_size(256,1)
-fn main(@builtin(global_invocation_id) global_id: vec3<u32>,  @builtin(local_invocation_id) local_invocation_id : vec3<u32>,) {
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let half_width = f32(width) / 2.0;
     let half_height = f32(height) / 2.0;
     let camera = create_camera(vec3<f32>(0.0,0.0,0.0), vec3<f32>(0.0,0.0,1.0), f32(height));
 
-    let i = i32(local_invocation_id.x);
     let array_pos =  i32(global_id.x);
     let x = array_pos % width;
     let y = array_pos / width;
