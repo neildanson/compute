@@ -33,10 +33,10 @@ async fn run() {
     
     let num_threads : u32 = ((WIDTH * HEIGHT) / 256).try_into().unwrap();
     let mut spheres = Vec::new();
-    for _ in 0..1 {
+    for i in -3..3 {
         let sphere = Sphere {
-            origin: [0.0, 0.0, 15.0],
-            radius: 4.0,
+            origin: [i as f32, 0.0, 15.0],
+            radius: 0.5,
         };
         spheres.push(sphere);
     }

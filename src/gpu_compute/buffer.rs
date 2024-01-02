@@ -33,11 +33,12 @@ pub struct Buffer<T: Pod> {
     gpu_buffer: wgpu::Buffer,
     ram_buffer: Rc<wgpu::Buffer>,
     size: wgpu::BufferAddress,
+    is_dirty: bool,
     _phantom: std::marker::PhantomData<T>,
 }
 
 pub(crate) trait BindableBuffer {
-    fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder);
+    fn copy_to_buffer(&mut self, encoder: &mut wgpu::CommandEncoder);
     fn as_binding_resource(&self) -> wgpu::BindingResource;
 }
 
@@ -91,6 +92,7 @@ impl<T: Pod> Buffer<T> {
             ram_buffer,
             gpu_buffer,
             size,
+            is_dirty: true,
             _phantom: std::marker::PhantomData,
         })
 
@@ -131,8 +133,11 @@ impl<T: Pod> Buffer<T> {
 }
 
 impl<T: Pod> BindableBuffer for Buffer<T> {
-    fn copy_to_buffer(&self, encoder: &mut wgpu::CommandEncoder) {
-        encoder.copy_buffer_to_buffer(&self.ram_buffer, 0, &self.gpu_buffer, 0, self.size);
+    fn copy_to_buffer(&mut self, encoder: &mut wgpu::CommandEncoder) {
+        if self.is_dirty {
+            self.is_dirty = false;
+            encoder.copy_buffer_to_buffer(&self.ram_buffer, 0, &self.gpu_buffer, 0, self.size);
+        }
     }
 
     fn as_binding_resource(&self) -> wgpu::BindingResource {
