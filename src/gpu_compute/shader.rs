@@ -32,7 +32,7 @@ impl Shader {
         }
     }
 
-    pub fn create_binding(&mut self, name: &str, binding: Binding) {
+    pub fn bind(&mut self, name: &str, binding: Binding) {
         self.bindings.insert(name.to_string(), binding);
     }
 

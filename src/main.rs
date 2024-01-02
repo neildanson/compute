@@ -83,16 +83,16 @@ async fn run() {
 
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
-    ray_generation_shader.create_binding("width", width_binding);
-    ray_generation_shader.create_binding("height", height_binding);
-    ray_generation_shader.create_binding("generated_rays", generated_rays_binding);
+    ray_generation_shader.bind("width", width_binding);
+    ray_generation_shader.bind("height", height_binding);
+    ray_generation_shader.bind("generated_rays", generated_rays_binding);
 
-    ray_intersection_shader.create_binding("spheres", spheres_binding);
-    ray_intersection_shader.create_binding(
+    ray_intersection_shader.bind("spheres", spheres_binding);
+    ray_intersection_shader.bind(
         "generated_rays",
         generated_rays_binding2,
     );
-    ray_intersection_shader.create_binding(
+    ray_intersection_shader.bind(
         "generated_intersections",
         generated_intersections_binding,
     );
