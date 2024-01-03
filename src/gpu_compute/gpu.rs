@@ -51,7 +51,6 @@ impl Gpu {
 
     pub fn create_storage_buffer_with_data<T: Pod>(self: &Rc<Self>, data: &[T]) -> Rc<Buffer<T>> {
         let data = Data::Slice(Rc::from(data));
-        println!("data size: {}", data.size());
         self.create_buffer(
             data,
             Parameters {

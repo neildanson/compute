@@ -25,10 +25,10 @@ struct Sphere {
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
 struct Intersection {
     ray: Ray, //4
-    //distance : f32,
+    normal: [f32; 4], //4
     //sphere : Sphere,
     //is_hit : i32, //5
-    _padding: [i32; 4], //8
+    padding : [f32; 4], //7
 }
 
 fn ray_generation_shader(gpu : &Rc<Gpu>, generated_rays_buffer : Rc<Buffer<Ray>>) -> Shader {
@@ -122,8 +122,12 @@ async fn run() {
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
                 let intersection = result[idx];
-                if intersection._padding[3] == 1 {
-                    *i = 0xFFFFFFFF;
+                if intersection.padding[0] > 0.0 {
+                    let r = ((intersection.normal[0] + 1.0) * 0.5 * 255.0) as u32;
+                    let g = ((intersection.normal[1] + 1.0) * 0.5 * 255.0) as u32;
+                    let b = ((intersection.normal[2] + 1.0) * 0.5 * 255.0) as u32;
+                    let a = 255;
+                    *i = (a << 24) | (b << 16) | (g << 8) | r;
                     continue;
                 }
             }
