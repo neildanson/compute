@@ -4,8 +4,8 @@ use bytemuck::{Pod, Zeroable};
 use compute::gpu_compute::{Gpu, Shader, Buffer};
 use minifb::{Key, Window, WindowOptions};
 
-const WIDTH: usize = 640;
-const HEIGHT: usize = 480;
+const WIDTH: usize = 1920;
+const HEIGHT: usize = 1080;
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable, Debug)]
