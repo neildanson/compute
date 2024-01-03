@@ -1,5 +1,7 @@
+use std::rc::Rc;
+
 use bytemuck::{Pod, Zeroable};
-use compute::gpu_compute::Gpu;
+use compute::gpu_compute::{Gpu, Shader, Buffer};
 use minifb::{Key, Window, WindowOptions};
 
 const WIDTH: usize = 640;
@@ -29,46 +31,61 @@ struct Intersection {
     _padding: [i32; 4], //8
 }
 
-async fn run() {
-    
-    let num_threads : u32 = ((WIDTH * HEIGHT) / 256).try_into().unwrap();
+fn ray_generation_shader(gpu : &Rc<Gpu>, generated_rays_buffer : Rc<Buffer<Ray>>) -> Shader {
+    let ray_generation_shader_src = include_str!("ray_generation.wgsl");
+
+    let width_binding = gpu.create_uniform(WIDTH as i32).to_binding(0, 1);
+    let height_binding = gpu.create_uniform(HEIGHT as i32).to_binding(0, 2);
+    let generated_rays_binding = generated_rays_buffer.clone()
+        .to_binding(0, 3);
+
+    let mut shader = gpu.create_shader(ray_generation_shader_src, "main");
+    shader.bind("width", width_binding);
+    shader.bind("height", height_binding);
+    shader.bind("generated_rays", generated_rays_binding);
+
+    shader
+}
+
+fn ray_intersection_shader(gpu : &Rc<Gpu>, generated_rays_buffer : Rc<Buffer<Ray>>, generated_intersections_buffer : Rc<Buffer<Intersection>>) -> Shader {
     let mut spheres = Vec::new();
-    for i in -3..3 {
+    for i in 0..5 {
         let sphere = Sphere {
-            origin: [i as f32, 0.0, 15.0],
+            origin: [i as f32, 0.0, 5.0],
             radius: 0.5,
         };
         spheres.push(sphere);
     }
 
-    let ray_generation_shader = include_str!("ray_generation.wgsl");
-    let ray_intersection_shader = include_str!("ray_intersection.wgsl");
+    let ray_intersection_shader_src = include_str!("ray_intersection.wgsl");
 
-    let gpu = Gpu::new().await.unwrap();
-
-    let mut ray_generation_shader = gpu.create_shader(ray_generation_shader, "main");
-    let mut ray_intersection_shader = gpu.create_shader(ray_intersection_shader, "main");
-
-    //TODO - move this to the gpu, return an Rc ,& make shader create the binding
-    let width_binding = gpu.create_uniform(WIDTH as i32).to_binding(0, 1);
-    let height_binding = gpu.create_uniform(HEIGHT as i32).to_binding(0, 2);
+    let generated_rays_binding = generated_rays_buffer
+        .to_binding(0, 0);
     let spheres_binding = gpu
         .create_storage_buffer_with_data(&spheres)
         .to_binding(0, 1);
-
     
-    let generated_rays_buffer = gpu
-        .create_storage_buffer::<Ray>(WIDTH * HEIGHT);
+    let generated_intersections_binding = generated_intersections_buffer.to_binding(0, 2);
 
-    let generated_rays_binding = generated_rays_buffer.clone()
-        .to_binding(0, 3);
+    let mut shader = gpu.create_shader(ray_intersection_shader_src, "main");
+    shader.bind("generated_rays", generated_rays_binding);
+    shader.bind("spheres", spheres_binding);
+    shader.bind("generated_intersections", generated_intersections_binding);
 
-    let generated_rays_binding2 = generated_rays_buffer
-        .to_binding(0, 0);
+    shader
+}
 
-    let generated_intersections_buffer =
-        gpu.create_storage_buffer::<Intersection>(WIDTH * HEIGHT);
-    let generated_intersections_binding = generated_intersections_buffer.clone().to_binding(0, 2);
+async fn run() {
+    
+    let num_threads : u32 = ((WIDTH * HEIGHT) / 256).try_into().unwrap();
+    
+    let gpu = Gpu::new().await.unwrap();
+
+    let generated_rays_buffer = gpu.create_storage_buffer::<Ray>(WIDTH * HEIGHT);
+    let generated_intersections_buffer = gpu.create_storage_buffer::<Intersection>(WIDTH * HEIGHT);
+
+    let mut ray_generation_shader = ray_generation_shader(&gpu, generated_rays_buffer.clone());
+    let mut ray_intersection_shader = ray_intersection_shader(&gpu, generated_rays_buffer.clone(), generated_intersections_buffer.clone());
 
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
@@ -84,20 +101,6 @@ async fn run() {
 
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
-    ray_generation_shader.bind("width", width_binding);
-    ray_generation_shader.bind("height", height_binding);
-    ray_generation_shader.bind("generated_rays", generated_rays_binding);
-
-    ray_intersection_shader.bind("spheres", spheres_binding);
-    ray_intersection_shader.bind(
-        "generated_rays",
-        generated_rays_binding2,
-    );
-    ray_intersection_shader.bind(
-        "generated_intersections",
-        generated_intersections_binding,
-    );
-
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         {

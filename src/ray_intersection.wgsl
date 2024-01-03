@@ -8,6 +8,7 @@ struct Sphere {
     radius : f32,
 }
 
+//should contain ray, distance, normal, is_hit
 struct Intersection { 
     ray : Ray, //8
     //distance : f32,
@@ -32,7 +33,7 @@ fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
     let diff = sphere.position.xyz - ray.origin.xyz;
     let v = dot(diff, ray.direction.xyz);
     if (v < 0.0) {
-        return Intersection(ray, vec4<i32>(0,0,0, 0));
+        return Intersection(ray, vec4<i32>(0,0,0,0));
     } else {
         let distance_squared = pow(sphere.radius, 2.0) - (dot(diff, diff) - pow(v,2.0));
         if (distance_squared < 0.0) {
@@ -66,12 +67,16 @@ fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
 @compute
 @workgroup_size(256, 1)
 fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>, ) {
-    let num_spheres = 1;
+    let num_spheres = 5;
     let width = 640;
     let array_pos = i32(global_invocation_id.x);
 
     for (var j = 0; j < num_spheres; j++) {
         let sphere = spheres[j];
-        result[array_pos] = intersects(sphere, input[array_pos]);
+        let prev_intersection = result[array_pos];
+        let new_intersection = intersects(sphere, input[array_pos]);
+        if (prev_intersection.padding.w == 0) {
+            result[array_pos] = new_intersection;
+        }
     } 
 }
