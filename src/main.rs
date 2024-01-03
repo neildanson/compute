@@ -56,6 +56,11 @@ fn ray_intersection_shader(gpu : &Rc<Gpu>, generated_rays_buffer : Rc<Buffer<Ray
         };
         spheres.push(sphere);
     }
+    let sphere = Sphere {
+        origin: [0.0, 10000.0, 5.0],
+        radius: 9999.5,
+    };
+    spheres.push(sphere);
 
     let ray_intersection_shader_src = include_str!("ray_intersection.wgsl");
 
