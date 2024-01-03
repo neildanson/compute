@@ -36,7 +36,7 @@ fn recenter_x(x : f32, half_width : f32) -> f32 {
 }
 
 fn recenter_y(y : f32, half_height : f32) -> f32 {
-    return (y - half_height);
+    return y - half_height;
 }
 
 fn get_ray(x : f32, y : f32, half_width : f32, half_height :f32, camera : Camera) -> Ray {
