@@ -163,10 +163,10 @@ async fn run() {
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
                 let color = result[idx];
-                let rgb = ((color[2] * 255.0) as u32) << 24 | 
-                          ((color[2] * 255.0) as u32) << 16 | 
-                          ((color[2] * 255.0) as u32) << 8 | 
-                          ((color[0] * 255.0) as u32);
+                let rgb = ((color[3] * 255.0) as u32) << 24 | 
+                          ((color[0] * 255.0) as u32) << 16 | 
+                          ((color[1] * 255.0) as u32) << 8 | 
+                          ((color[2] * 255.0) as u32);
                 *i = rgb;
             }
         }
