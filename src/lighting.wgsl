@@ -14,20 +14,34 @@ struct Intersection {
     hit_data : vec4<f32>, //80
 }
 
+struct Light { 
+    position : vec4<f32>, 
+    color : vec4<f32>, 
+}
+
+
 @group(0)
 @binding(0)
-var<storage, read> intersections: array<Intersection>; 
+var<storage, read_write> result: array<i32>; 
 
 @group(0)
 @binding(1)
-var<storage, read_write> result: array<i32>; 
+var<storage, read> intersections: array<Intersection>; 
+
+@group(0)
+@binding(2)
+var<storage, read> lights: array<Light>; 
+
 
 @compute
 @workgroup_size(256, 1)
 fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>, ) {
     let intersection = intersections[global_invocation_id.x];
     if (intersection.hit_data.x > 0.0) {
-        result[global_invocation_id.x] = 1;
+        for (var i = 0; i < 1; i++) {
+            let light = lights[i];
+            result[global_invocation_id.x] = 1;
+        }
     }
     else {
         result[global_invocation_id.x] = 0;

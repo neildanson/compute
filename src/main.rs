@@ -30,6 +30,13 @@ struct Intersection {
     hit_data: [f32; 4], //7
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable, Debug)]
+struct Light {
+    origin: [f32; 4],
+    color: [f32; 4],
+}
+
 fn ray_generation_shader(gpu: &Rc<Gpu>, generated_rays_buffer: Rc<Buffer<Ray>>) -> Shader {
     let ray_generation_shader_src = include_str!("ray_generation.wgsl");
 
@@ -86,13 +93,27 @@ fn lighting_shader(
     generated_intersections_buffer: Rc<Buffer<Intersection>>,
     lighing_buffer: Rc<Buffer<i32>>,
 ) -> Shader {
+    let mut lights = Vec::new();
+    for i in 0..1 {
+        let light = Light {
+            origin: [0.0, 5.0 * i as f32, 5.0, 0.0],
+            color: [0.5,0.5,0.5,0.5]
+        };
+        lights.push(light);
+    }
+
     let ray_intersection_shader_src = include_str!("lighting.wgsl");
 
-    let generated_intersections_binding = generated_intersections_buffer.to_binding(0, 0);
-    let lighing_buffer_binding = lighing_buffer.to_binding(0, 1);
+    let lighing_buffer_binding = lighing_buffer.to_binding(0, 0);
+    let generated_intersections_binding = generated_intersections_buffer.to_binding(0, 1);
+    let lights_binding = gpu
+        .create_storage_buffer_with_data(&lights)
+        .to_binding(0, 2);
+
     let mut shader = gpu.create_shader(ray_intersection_shader_src, "main");
     shader.bind("generated_intersections", generated_intersections_binding);
     shader.bind("lighting_buffer", lighing_buffer_binding);
+    shader.bind("lights", lights_binding);
 
     shader
 }
