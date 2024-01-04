@@ -39,8 +39,9 @@ fn apply_light(intersection : Intersection, light : Light) -> vec4<f32> {
     let intersection_point = intersection.ray.origin.xyz + intersection.ray.direction.xyz * intersection.hit_data.y;
     let sphere_normal = normalize(intersection_point - intersection.sphere.position);
     let light_direction = normalize(light.position.xyz - intersection_point);
-    let light_color = light.color.xyz * max(dot(sphere_normal, light_direction), 0.0);
-
+    var light_color = light.color.xyz * max(dot(sphere_normal, light_direction), 0.0);
+    let specular  = pow(max(dot(sphere_normal, reflect(-light_direction, sphere_normal)), 0.0), 256.0);
+    light_color = light_color + specular;
     return vec4<f32>(light_color, 1.0);
 }
 
@@ -53,7 +54,8 @@ fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>, ) {
         for (var i = 0; i < num_lights; i++) {
             let light = lights[i];
             let color = apply_light(intersection, light);
-            result[global_invocation_id.x] = Color(result[global_invocation_id.x].rgba + color);
+            result[global_invocation_id.x] = Color(
+                clamp(result[global_invocation_id.x].rgba + color, vec4<f32>(0.0), vec4<f32>(1.0)));
         }
     }
     else {
