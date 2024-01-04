@@ -137,12 +137,12 @@ async fn run() {
             lighting_shader.execute(num_threads, 1, 1);
         }
 
-        let result = generated_intersections_buffer.read().await.unwrap();
+        let result = lighting_result_buffer.read().await.unwrap();
 
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
                 let intersection = result[idx];
-                if intersection.hit_data[0] > 0.0 {
+                if intersection > 0 {
                     let (r, g, b, a) = (255, 255, 255, 255);
                     //let r = ((intersection.normal[0] + 1.0) * 0.5 * 255.0) as u32;
                     //let g = ((intersection.normal[1] + 1.0) * 0.5 * 255.0) as u32;
