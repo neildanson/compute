@@ -94,10 +94,10 @@ fn lighting_shader(
     lighing_buffer: Rc<Buffer<[f32;4]>>,
 ) -> Shader {
     let mut lights = Vec::new();
-    for i in 0..1 {
+    for i in 0..3 {
         let light = Light {
-            origin: [0.0,  i as f32, 2.0, 0.0],
-            color: [0.5,0.5,0.5,1.0]
+            origin: [i as f32 * 3.0,  -i as f32, 2.0, 0.0],
+            color: [0.2,0.2,0.2,1.0]
         };
         lights.push(light);
     }
