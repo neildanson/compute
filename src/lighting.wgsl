@@ -19,10 +19,13 @@ struct Light {
     color : vec4<f32>, 
 }
 
+struct Color {
+    rgba : vec4<f32>,
+}
 
 @group(0)
 @binding(0)
-var<storage, read_write> result: array<i32>; 
+var<storage, read_write> result: array<Color>; 
 
 @group(0)
 @binding(1)
@@ -32,6 +35,14 @@ var<storage, read> intersections: array<Intersection>;
 @binding(2)
 var<storage, read> lights: array<Light>; 
 
+fn apply_light(intersection : Intersection, light : Light) -> vec4<f32> {
+    let intersection_point = intersection.ray.origin.xyz + intersection.ray.direction.xyz * intersection.hit_data.y;
+    let sphere_normal = normalize(intersection_point - intersection.sphere.position);
+    let light_direction = normalize(light.position.xyz - intersection_point);
+    let light_color = light.color.xyz * max(dot(sphere_normal, light_direction), 0.0);
+    
+    return vec4<f32>(light_color, 1.0);
+}
 
 @compute
 @workgroup_size(256, 1)
@@ -41,10 +52,11 @@ fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>, ) {
     if (intersection.hit_data.x > 0.0) {
         for (var i = 0; i < num_lights; i++) {
             let light = lights[i];
-            result[global_invocation_id.x] = 1;
+            let color = apply_light(intersection, light);
+            result[global_invocation_id.x] = Color(color);
         }
     }
     else {
-        result[global_invocation_id.x] = 0;
+        result[global_invocation_id.x] = Color(vec4<f32>(0.0));
     }
 }

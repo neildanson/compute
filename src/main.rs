@@ -91,13 +91,13 @@ fn ray_intersection_shader(
 fn lighting_shader(
     gpu: &Rc<Gpu>,
     generated_intersections_buffer: Rc<Buffer<Intersection>>,
-    lighing_buffer: Rc<Buffer<i32>>,
+    lighing_buffer: Rc<Buffer<[f32;4]>>,
 ) -> Shader {
     let mut lights = Vec::new();
     for i in 0..1 {
         let light = Light {
-            origin: [0.0, 5.0 * i as f32, 5.0, 0.0],
-            color: [0.5,0.5,0.5,0.5]
+            origin: [0.0, 10.0 * i as f32, 2.0, 0.0],
+            color: [0.5,0.5,0.5,1.0]
         };
         lights.push(light);
     }
@@ -125,7 +125,7 @@ async fn run() {
 
     let generated_rays_buffer = gpu.create_storage_buffer::<Ray>(WIDTH * HEIGHT);
     let generated_intersections_buffer = gpu.create_storage_buffer::<Intersection>(WIDTH * HEIGHT);
-    let lighting_result_buffer = gpu.create_storage_buffer::<i32>(WIDTH * HEIGHT);
+    let lighting_result_buffer = gpu.create_storage_buffer::<[f32; 4]>(WIDTH * HEIGHT);
 
     let mut ray_generation_shader = ray_generation_shader(&gpu, generated_rays_buffer.clone());
     let mut ray_intersection_shader = ray_intersection_shader(
@@ -162,16 +162,12 @@ async fn run() {
 
         for (idx, i) in buffer.iter_mut().enumerate() {
             if idx < result.len() {
-                let intersection = result[idx];
-                if intersection > 0 {
-                    let (r, g, b, a) = (255, 255, 255, 255);
-                    //let r = ((intersection.normal[0] + 1.0) * 0.5 * 255.0) as u32;
-                    //let g = ((intersection.normal[1] + 1.0) * 0.5 * 255.0) as u32;
-                    //let b = ((intersection.normal[2] + 1.0) * 0.5 * 255.0) as u32;
-                    //let a = 255;
-                    *i = (a << 24) | (b << 16) | (g << 8) | r;
-                    continue;
-                }
+                let color = result[idx];
+                let rgb = ((color[2] * 255.0) as u32) << 24 | 
+                          ((color[2] * 255.0) as u32) << 16 | 
+                          ((color[2] * 255.0) as u32) << 8 | 
+                          ((color[0] * 255.0) as u32);
+                *i = rgb;
             }
         }
 
