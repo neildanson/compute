@@ -37,8 +37,9 @@ var<storage, read> lights: array<Light>;
 @workgroup_size(256, 1)
 fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>, ) {
     let intersection = intersections[global_invocation_id.x];
+    let num_lights = i32(arrayLength(&lights));
     if (intersection.hit_data.x > 0.0) {
-        for (var i = 0; i < 1; i++) {
+        for (var i = 0; i < num_lights; i++) {
             let light = lights[i];
             result[global_invocation_id.x] = 1;
         }
