@@ -88,16 +88,13 @@ impl Shader {
             cpass.dispatch_workgroups(x, y, z);
         }
 
+        for binding in self.bindings.values().into_iter() {
+            let mut buffer = binding.buffer.clone();
+            let b = unsafe { Rc::get_mut_unchecked(&mut buffer) };
+            b.copy_to_buffer(&mut encoder)
+        }
 
-
-                for binding in self.bindings.values().into_iter() {
-                    let mut buffer = binding.buffer.clone();
-                    let b = unsafe { Rc::get_mut_unchecked(&mut buffer) };
-                    b.copy_to_buffer(&mut encoder)
-                }
-
-
-                // Submits command encoder for processing
-                self.gpu.queue.submit(Some(encoder.finish()));
+        // Submits command encoder for processing
+        self.gpu.queue.submit(Some(encoder.finish()));
     }
 }

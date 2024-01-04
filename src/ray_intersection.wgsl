@@ -8,11 +8,11 @@ struct Sphere {
     radius : f32,
 }
 
-//should contain ray, distance, normal, is_hit
+//should contain ray, sphere, distance, is_hit
 struct Intersection { 
     ray : Ray, //32
-    normal: vec4<f32>, //48
-    padding : vec4<f32>, //64
+    sphere : Sphere, //64
+    hit_data : vec4<f32>, //80
 }
 
 @group(0)
@@ -31,15 +31,14 @@ fn intersects(sphere : Sphere, ray : Ray) -> Intersection {
     let diff = sphere.position.xyz - ray.origin.xyz;
     let v = dot(diff, ray.direction.xyz);
     if v < 0.0 {
-        return Intersection(ray, vec4<f32>(0.0), vec4<f32>(0.0));
+        return Intersection(ray, sphere, vec4<f32>(0.0));
     } else {
         let distance_squared = pow(sphere.radius, 2.0) - (dot(diff, diff) - pow(v,2.0));
         if distance_squared < 0.0 {
-            return Intersection (ray, vec4<f32>(0.0), vec4<f32>(0.0));
+            return Intersection (ray, sphere, vec4<f32>(0.0));
         } else {
             let distance = v - sqrt(distance_squared);
-            let n = normalize(ray.origin.xyz + (ray.direction.xyz * distance) - sphere.position.xyz);
-            return Intersection (ray, vec4<f32>(n, 0.0), vec4<f32>(1.0, distance, 0.0, 0.0));
+            return Intersection (ray,sphere, vec4<f32>(1.0, distance, 0.0, 0.0));
         }
     }
 }
@@ -55,10 +54,10 @@ fn main(@builtin(global_invocation_id) global_invocation_id : vec3<u32>, ) {
     for (var j = 0; j < num_spheres; j++) {
         let sphere = spheres[j];
         let new_intersection = intersects(sphere, input[array_pos]);
-        if new_intersection.padding.x > 0.0 
-            && new_intersection.padding.y < nearest_distance 
+        if new_intersection.hit_data.x > 0.0 
+            && new_intersection.hit_data.y < nearest_distance 
             {
-            nearest_distance = new_intersection.padding.y; 
+            nearest_distance = new_intersection.hit_data.y; 
             result[array_pos] = new_intersection;
         }
     } 
