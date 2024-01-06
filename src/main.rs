@@ -96,7 +96,7 @@ fn lighting_shader(
     let mut lights = Vec::new();
     for i in -1..1 {
         let light = Light {
-            origin: [i as f32 * 3.0, -5.0, 2.0, 0.0],
+            origin: [i as f32 * 3.0, -2.0, 1.0, 0.0],
             color: [0.2,0.2,0.2,1.0]
         };
         lights.push(light);
